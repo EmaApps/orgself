@@ -39,7 +39,7 @@ mainWith args = do
         H.div ! A.class_ "container mx-auto" $ do
           let heading =
                 H.header
-                  ! A.class_ "text-4xl my-2 py-2 font-bold text-center bg-purple-50 shadow"
+                  ! A.class_ "text-4xl my-2 py-2 font-bold text-center bg-purple-600 text-gray-100 shadow"
           case r of
             Index -> do
               heading "My Diary"
@@ -50,6 +50,15 @@ mainWith args = do
               heading $ show day
               routeElem Index "Back to Index"
               maybe "not found" renderOrg (Map.lookup day diary)
+          H.footer
+            ! A.class_ "text-xs my-4 py-2 text-center bg-gray-200"
+            $ do
+              "Powered by "
+              H.a
+                ! A.href "https://github.com/srid/memoir"
+                ! A.target "blank_"
+                ! A.class_ "text-purple font-bold"
+                $ "memoir"
     routeElem r w =
       H.a ! A.class_ "text-xl text-purple-500 hover:underline" ! routeHref r $ w
     routeHref r =
@@ -86,10 +95,11 @@ renderOrgDoc (Org.OrgDoc blocks sections) = do
 
 renderSection :: Org.Section -> H.Html
 renderSection (Org.Section heading tags doc) = do
-  H.li $ do
-    forM_ heading $ \s ->
-      renderWords s >> " "
-    forM_ tags renderTag
+  H.li ! A.class_ "my-2" $ do
+    H.span ! A.class_ "py-1 text-xl hover:bg-purple-100 cursor-default" $ do
+      forM_ heading $ \s ->
+        renderWords s >> " "
+      forM_ tags renderTag
     renderOrgDoc doc
 
 renderTag :: Text -> H.Html
