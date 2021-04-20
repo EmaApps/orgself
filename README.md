@@ -1,6 +1,6 @@
 # memoir
 
-Create no-frills journal site from plain-text outliner (using org-mode). Based on [ema](https://github.com/srid/ema).
+Create no-frills journal website from plain-text outlining (org-mode). Based on [ema](https://github.com/srid/ema).
 
 ## Running
 
