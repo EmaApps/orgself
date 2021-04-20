@@ -110,12 +110,30 @@ renderTag tag =
     $ H.toMarkup tag
 
 renderWords :: Org.Words -> H.Markup
-renderWords ws = do
-  let s = Org.prettyWords ws
-  if s `Set.member` Set.fromList ["TODO", "DONE"]
-    then
-      H.span
-        ! A.class_ "border-1 p-0.5 bg-gray-600 text-white"
-        ! A.title "Keyword"
-        $ H.toMarkup s
-    else H.toMarkup s
+renderWords = \case
+  Org.Bold s -> H.b (H.toHtml s)
+  Org.Italic s -> H.i (H.toHtml s)
+  Org.Highlight s -> H.mark (H.toHtml s)
+  Org.Underline s -> H.u (H.toHtml s)
+  Org.Verbatim s -> H.code (H.toHtml s)
+  Org.Strike s -> H.del (H.toHtml s)
+  Org.Link (Org.URL url) ms ->
+    H.a ! A.href (hrefAttr url) $ maybe "" H.toHtml ms
+  Org.Image (Org.URL url) ->
+    H.img ! A.src (hrefAttr url)
+  Org.Tags tags ->
+    forM_ tags renderTag
+  Org.Punct c ->
+    H.toHtml c
+  Org.Plain s ->
+    -- `org-mode` library doedn't parse these; until then, we handle them here.
+    if s `Set.member` Set.fromList ["TODO", "DONE"]
+      then
+        H.span
+          ! A.class_ "border-1 p-0.5 bg-gray-600 text-white"
+          ! A.title "Keyword"
+          $ H.toMarkup s
+      else H.toMarkup s
+  where
+    hrefAttr url =
+      fromString . toString $ url
