@@ -1,7 +1,7 @@
 {
   description = "Memoir";
   inputs = {
-    ema.url = "github:srid/ema/3b8b01319db8a853447b8fca7d0309ab0b422bd8";
+    ema.url = "github:srid/ema/f1428dc6c1183a4a6174889bde55930c20e47704";
     # FIXME: uncommenting this gives,
     #   error: in pure evaluation mode, 'fetchTarball' requires a 'sha256' argument
     # nixpkgs.follows = "ema";
@@ -27,7 +27,9 @@
             root = ./.;
             withHoogle = false;
             overrides = self: super: with pkgs.haskell.lib; {
-              ema = inputs.ema.defaultPackage.${system};
+              ema = disableCabalFlag
+                inputs.ema.defaultPackage.${system}
+                "with-examples";
               org-mode = dontCheck super.org-mode; # `tasty` dependency is broken on nixpkgs
             };
             modifier = drv:

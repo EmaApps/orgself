@@ -17,3 +17,8 @@ Open `flake.nix` and change `ema.url` to point to a new revision.
 ## Generating static site
 
 TODO
+
+## Credits
+
+- [Org Mode](https://orgmode.org/) (file format used)
+- [Org Mode Haskell parser](https://github.com/fosskers/org-mode)
