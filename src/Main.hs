@@ -2,8 +2,6 @@
 
 module Main where
 
-import Control.Concurrent.Async (race_)
-import qualified Data.LVar as LVar
 import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
 import qualified Data.Org as Org
@@ -29,10 +27,8 @@ mainWith args = do
   folder <- case args of
     [path] -> canonicalizePath path
     _ -> canonicalizePath "example"
-  model <- LVar.new =<< Data.diaryFrom folder
-  race_
-    (runEma model render)
-    (Data.watchAndUpdateDiary folder model)
+  model0 <- Data.diaryFrom folder
+  runEma model0 (Data.watchAndUpdateDiary folder) render
   where
     render (diary :: Diary) (r :: Route) =
       Layout.tailwindSite (H.title "My Diary") $
