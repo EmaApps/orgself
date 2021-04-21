@@ -1,4 +1,5 @@
-#+mood: 5
+#+mood: 4/5
+#+got-sun: full
 
 * From today, I'll record my daily thoughts in org-mode
 ** TODO Soon, this will also become my task manager!
