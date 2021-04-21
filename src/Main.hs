@@ -21,13 +21,15 @@ import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 
 main :: IO ()
-main = mainWith . drop 1 =<< getArgs
+main = do
+  folder <-
+    getArgs >>= \case
+      [_, path] -> canonicalizePath path
+      _ -> canonicalizePath "example"
+  mainWith folder
 
-mainWith :: [String] -> IO ()
-mainWith args = do
-  folder <- case args of
-    [path] -> canonicalizePath path
-    _ -> canonicalizePath "example"
+mainWith :: FilePath -> IO ()
+mainWith folder = do
   flip runEma render $ \model -> do
     LVar.set model =<< Data.diaryFrom folder
     Data.watchAndUpdateDiary folder model
@@ -62,6 +64,8 @@ mainWith args = do
     routeHref r =
       A.href (fromString . toString $ routeUrl r)
 
+-- TODO: Move to separate module (after decoupling tailwind styling)
+-- Even make it a separate library, as long as CSS classes can be customized!
 renderOrg :: OrgFile -> H.Html
 renderOrg _org@(Org.OrgFile meta doc) = do
   let heading = H.header ! A.class_ "text-2xl my-2 font-bold"
@@ -69,8 +73,7 @@ renderOrg _org@(Org.OrgFile meta doc) = do
     heading "Meta"
     renderMeta meta
   heading "Doc"
-  -- Debug dump
-  -- H.pre $ H.toMarkup (Shower.shower org)
+  -- renderAST "AST" org
   renderOrgDoc doc
 
 renderMeta :: Map Text Text -> H.Html
@@ -84,21 +87,45 @@ renderMeta meta = do
 
 renderOrgDoc :: Org.OrgDoc -> H.Html
 renderOrgDoc (Org.OrgDoc blocks sections) = do
+  whenNotNull blocks $ \_ -> do
+    H.div ! A.class_ "" $
+      forM_ blocks renderBlock
+  renderOrgSections sections
+
+renderOrgSections :: [Org.Section] -> H.Html
+renderOrgSections sections =
   H.ul ! A.class_ "list-disc ml-8" $ do
-    whenNotNull blocks $ \_ -> do
-      H.header ! A.class_ "text-2xl font-bold" $ "Blocks"
-      H.pre $ H.toMarkup (Shower.shower blocks)
     whenNotNull sections $ \_ -> do
       forM_ sections renderSection
 
+renderBlock :: Org.Block -> H.Html
+renderBlock blk = case blk of
+  Org.Quote s -> H.blockquote (H.toHtml s)
+  Org.Example _s -> renderAST "TODO: Example" blk
+  Org.Code _mlang _s -> renderAST "TODO: Code" blk
+  Org.List (Org.ListItems items) ->
+    H.ul ! A.class_ "list-disc ml-4" $
+      forM_ items $ \(Org.Item ws msub) ->
+        H.li $ do
+          renderWordsList ws
+          whenJust msub $ \listItems ->
+            renderBlock $ Org.List listItems
+  Org.Table _rows -> renderAST "TODO: Table" blk
+  Org.Paragraph ws -> H.p $ renderWordsList ws
+
 renderSection :: Org.Section -> H.Html
-renderSection (Org.Section heading tags doc) = do
+renderSection (Org.Section heading tags (Org.OrgDoc blocks sections)) = do
   H.li ! A.class_ "my-2" $ do
-    H.span ! A.class_ "py-1 text-xl hover:bg-purple-100 cursor-default" $ do
-      forM_ heading $ \s ->
-        renderWords s >> " "
+    H.div ! A.class_ ("py-1 text-xl cursor-default " <> "hover:" <> itemHoverClass) $ do
+      renderWordsList heading
       forM_ tags renderTag
-    renderOrgDoc doc
+      whenNotNull blocks $ \_ -> do
+        H.div ! A.class_ "border-l-2 pl-2 text-gray-700 bg-gray-50 mt-2" $
+          forM_ blocks renderBlock
+    renderOrgSections sections
+
+itemHoverClass :: H.AttributeValue
+itemHoverClass = "bg-purple-100"
 
 renderTag :: Text -> H.Html
 renderTag tag =
@@ -106,6 +133,10 @@ renderTag tag =
     ! A.class_ "border-1 p-0.5 bg-purple-200 font-bold rounded"
     ! A.title "Tag"
     $ H.toMarkup tag
+
+renderWordsList :: Foldable f => f Org.Words -> H.Markup
+renderWordsList =
+  mapM_ $ \s -> renderWords s >> " "
 
 renderWords :: Org.Words -> H.Markup
 renderWords = \case
@@ -135,3 +166,9 @@ renderWords = \case
   where
     hrefAttr url =
       fromString . toString $ url
+
+renderAST :: Show a => Text -> a -> H.Html
+renderAST name x = do
+  H.div ! A.class_ "border-2 p-2 rounded text-xs" $ do
+    H.header ! A.class_ "font-bold" $ H.toMarkup name
+    H.pre ! A.class_ "" $ H.toMarkup $ Shower.shower x
