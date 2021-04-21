@@ -28,7 +28,10 @@ executable memoir
     , blaze-html
     , blaze-markup
     , containers
+    , constraints-extras
+    , dependent-map
     , dependent-sum
+    , dependent-sum-template
     , directory
     , ema
     , filepath

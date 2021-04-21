@@ -3,12 +3,14 @@
 
 module Main where
 
+import qualified Data.Dependent.Map as DMap
 import Data.Dependent.Sum
 import qualified Data.LVar as LVar
 import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
 import qualified Data.Org as Org
 import qualified Data.Set as Set
+import Data.Some
 import Data.Time.Calendar (addDays)
 import Ema.App (runEma)
 import qualified Ema.Helper.Tailwind as Tailwind
@@ -49,9 +51,26 @@ render diary r =
       case r of
         Index -> do
           heading "My Diary"
-          H.div ! A.class_ "" $
-            forM_ (sortOn Down $ Map.keys diary) $ \day ->
-              H.li $ routeDay day
+          H.div ! A.class_ "flex flex-col" $ do
+            let usedMeasures = Set.fromList $ concat $ Map.elems diary <&> \(_, measures) -> DMap.keys measures
+                td cls = H.td ! A.class_ ("border px-4 py-2 " <> cls)
+                th cls = H.td ! A.class_ ("border px-4 py-2 " <> cls)
+            -- Render diary index along with self-tracking measures, as a table.
+            H.table ! A.class_ "table-auto" $ do
+              H.tr ! A.class_ "bg-gray-50" $ do
+                th "" ""
+                forM_ usedMeasures $ \m -> do
+                  th "font-bold" $ H.toHtml $ measureName m
+              forM_ (sortOn (Down . fst) $ Map.toList diary) $ \(day, (_, dayMeasures)) -> do
+                H.tr $ do
+                  th "font-bold" $ routeDay day
+                  forM_ usedMeasures $ \m -> do
+                    let isCurr = \case
+                          Measure_Extent s :=> Identity _ -> m == Some (Measure_Extent s)
+                          Measure_Rating5 s :=> Identity _ -> m == Some (Measure_Rating5 s)
+                    case find isCurr (DMap.assocs dayMeasures) of
+                      Nothing -> td "" ""
+                      Just measure -> td "" $ renderMeasureValue measure
         OnDay day -> do
           heading $ show day
           routeElem Index "Back to Index"
@@ -102,25 +121,31 @@ renderOrg _org@(Org.OrgFile _meta doc) = do
 renderMeasures :: Measures -> H.Html
 renderMeasures meta = do
   H.table ! A.class_ "table-auto" $ do
-    let td cls = H.td ! A.class_ ("border px-4 py-2 " <> cls)
-    forM_ (Map.toList meta) $ \(k, v) ->
-      H.tr $ do
-        td "font-bold" $ H.toMarkup k
-        td "font-mono" $ renderMeasure v
+    forM_ (DMap.toList meta) $ \measure ->
+      H.tr $ renderMeasure measure
 
 renderMeasure :: DSum Measure Identity -> H.Html
 renderMeasure = \case
-  Measure_Rating5 :=> Identity rating -> do
+  x@(Measure_Rating5 name :=> Identity _) -> do
+    td "font-bold" $ H.toMarkup name
+    td "font-mono" $ renderMeasureValue x
+  x@(Measure_Extent name :=> Identity _) -> do
+    td "font-bold" $ H.toMarkup name
+    td "font-mono" $ renderMeasureValue x
+  where
+    td cls = H.td ! A.class_ ("border px-4 py-2 " <> cls)
+
+renderMeasureValue :: DSum Measure Identity -> H.Html
+renderMeasureValue = \case
+  Measure_Rating5 _name :=> Identity rating -> do
     let (x, y) = ratingSplit rating
     replicateM_ x $ Icons.starSolid "inline h-6 w-6"
     replicateM_ y $ Icons.star "inline h-5 w-6"
-  Measure_Extent :=> Identity extent -> do
+  Measure_Extent _name :=> Identity extent -> do
     case extent of
       ExtentFull -> Icons.rss "inline h-6 w-6"
       ExtentSome -> Icons.rssHalf "inline h-6 w-6"
       ExtentNone -> "None"
-  Measure_Unknown :=> Identity s ->
-    H.toHtml $ show @Text s <> " (unknown)"
 
 renderOrgDoc :: Org.OrgDoc -> H.Html
 renderOrgDoc (Org.OrgDoc blocks sections) = do

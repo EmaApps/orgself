@@ -1,10 +1,20 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Memoir.Data.Measure where
 
-import Data.Dependent.Sum
+import Data.Constraint.Extras.TH (deriveArgDict)
+import Data.Dependent.Map (DMap)
+import qualified Data.Dependent.Map as DMap
+import Data.Dependent.Sum (DSum (..))
+import Data.GADT.Compare.TH
+  ( DeriveGCompare (deriveGCompare),
+    DeriveGEQ (deriveGEq),
+  )
 import qualified Data.Map.Strict as Map
+import Data.Some
 import qualified Text.Megaparsec as M
 import qualified Text.Megaparsec.Char as M
 
@@ -12,7 +22,7 @@ type Parser a = M.Parsec Void Text a
 
 -- A rating from 1-5.
 newtype Rating5 = Rating5 {unRating5 :: Int}
-  deriving (Eq, Show)
+  deriving (Eq, Show, Ord)
 
 ratingSplit :: Rating5 -> (Int, Int)
 ratingSplit (Rating5 n) =
@@ -46,19 +56,27 @@ extentP = do
     x -> fail $ "Invalid value: " <> toString x
 
 data Measure a where
-  Measure_Rating5 :: Measure Rating5
-  Measure_Extent :: Measure Extent
-  Measure_Unknown :: Measure Text
+  Measure_Rating5 :: Text -> Measure Rating5
+  Measure_Extent :: Text -> Measure Extent
 
-parseMeasure :: Text -> DSum Measure Identity
-parseMeasure s = fromMaybe (Measure_Unknown :=> Identity s) $ do
+measureName :: Some Measure -> Text
+measureName = \case
+  Some (Measure_Rating5 s) -> s
+  Some (Measure_Extent s) -> s
+
+parseMeasure :: Text -> Text -> Maybe (DSum Measure Identity)
+parseMeasure name s = do
   asum
-    [ (Measure_Rating5 :=>) . Identity <$> M.parseMaybe ratings5P s,
-      (Measure_Extent :=>) . Identity <$> M.parseMaybe extentP s
+    [ (Measure_Rating5 name :=>) . Identity <$> M.parseMaybe ratings5P s,
+      (Measure_Extent name :=>) . Identity <$> M.parseMaybe extentP s
     ]
 
-type Measures = Map Text (DSum Measure Identity)
+type Measures = DMap Measure Identity
 
 parseMeasures :: Map Text Text -> Measures
 parseMeasures =
-  Map.map parseMeasure
+  DMap.fromList . Prelude.mapMaybe (uncurry parseMeasure) . Map.toList
+
+deriveGEq ''Measure
+deriveGCompare ''Measure
+deriveArgDict ''Measure
