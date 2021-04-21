@@ -2,6 +2,7 @@
 
 module Main where
 
+import qualified Data.LVar as LVar
 import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
 import qualified Data.Org as Org
@@ -27,8 +28,9 @@ mainWith args = do
   folder <- case args of
     [path] -> canonicalizePath path
     _ -> canonicalizePath "example"
-  model0 <- Data.diaryFrom folder
-  runEma model0 (Data.watchAndUpdateDiary folder) render
+  flip runEma render $ \model -> do
+    LVar.set model =<< Data.diaryFrom folder
+    Data.watchAndUpdateDiary folder model
   where
     render (diary :: Diary) (r :: Route) =
       Layout.tailwindSite (H.title "My Diary") $
