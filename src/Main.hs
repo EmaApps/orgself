@@ -1,7 +1,9 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Main where
 
+import Data.Dependent.Sum
 import qualified Data.LVar as LVar
 import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
@@ -13,7 +15,9 @@ import qualified Ema.Helper.Tailwind as Tailwind
 import Ema.Route (IsRoute (routeUrl))
 import Memoir.Data (Diary)
 import qualified Memoir.Data as Data
+import Memoir.Data.Measure
 import Memoir.Route (Route (..))
+import qualified Memoir.Widget.Icons as Icons
 import qualified Shower
 import System.Directory (canonicalizePath)
 import System.Environment (getArgs)
@@ -63,7 +67,7 @@ render diary r =
             H.span ! A.class_ "font-bold" $ H.toMarkup @Text (show day)
             " | "
             renderOtherDay tomorrow
-          maybe "not found" renderOrg (Map.lookup day diary)
+          maybe "not found" renderDay (Map.lookup day diary)
       H.footer
         ! A.class_ "text-xs my-4 py-2 text-center bg-gray-200"
         $ do
@@ -81,26 +85,42 @@ render diary r =
     routeHref r' =
       A.href (fromString . toString $ routeUrl r')
 
+renderDay :: (OrgFile, Measures) -> H.Html
+renderDay (orgFile, measures) = do
+  renderMeasures measures
+  renderOrg orgFile
+
 -- TODO: Move to separate module (after decoupling tailwind styling)
 -- Even make it a separate library, as long as CSS classes can be customized!
 renderOrg :: OrgFile -> H.Html
-renderOrg _org@(Org.OrgFile meta doc) = do
+renderOrg _org@(Org.OrgFile _meta doc) = do
   let heading = H.header ! A.class_ "text-2xl my-2 font-bold"
-  unless (null meta) $ do
-    heading "Meta"
-    renderMeta meta
   heading "Doc"
   -- renderAST "AST" org
   renderOrgDoc doc
 
-renderMeta :: Map Text Text -> H.Html
-renderMeta meta = do
+renderMeasures :: Measures -> H.Html
+renderMeasures meta = do
   H.table ! A.class_ "table-auto" $ do
     let td cls = H.td ! A.class_ ("border px-4 py-2 " <> cls)
     forM_ (Map.toList meta) $ \(k, v) ->
       H.tr $ do
         td "font-bold" $ H.toMarkup k
-        td "font-mono" $ H.toMarkup v
+        td "font-mono" $ renderMeasure v
+
+renderMeasure :: DSum Measure Identity -> H.Html
+renderMeasure = \case
+  Measure_Rating5 :=> Identity rating -> do
+    let (x, y) = ratingSplit rating
+    replicateM_ x $ Icons.starSolid "inline h-6 w-6"
+    replicateM_ y $ Icons.star "inline h-5 w-6"
+  Measure_Extent :=> Identity extent -> do
+    case extent of
+      ExtentFull -> Icons.rss "inline h-6 w-6"
+      ExtentSome -> Icons.rssHalf "inline h-6 w-6"
+      ExtentNone -> "None"
+  Measure_Unknown :=> Identity s ->
+    H.toHtml $ show @Text s <> " (unknown)"
 
 renderOrgDoc :: Org.OrgDoc -> H.Html
 renderOrgDoc (Org.OrgDoc blocks sections) = do

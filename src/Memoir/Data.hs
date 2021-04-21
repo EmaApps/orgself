@@ -10,6 +10,7 @@ import Data.Org (OrgFile)
 import qualified Data.Org as Org
 import qualified Data.Text as T
 import Data.Time (Day, defaultTimeLocale, parseTimeM)
+import Memoir.Data.Measure (Measures, parseMeasures)
 import System.FSNotify
   ( Event (..),
     watchDir,
@@ -18,23 +19,27 @@ import System.FSNotify
 import System.FilePath (takeFileName, (</>))
 import System.FilePattern.Directory (getDirectoryFiles)
 
+type Diary = Map Day (OrgFile, Measures)
+
 parseDay :: String -> Maybe Day
 parseDay =
   parseTimeM False defaultTimeLocale "%Y-%m-%d"
 
-parseDailyNote :: FilePath -> IO (Maybe (Day, OrgFile))
+parseDailyNote :: FilePath -> IO (Maybe (Day, (OrgFile, Measures)))
 parseDailyNote f =
   case parseDailyNoteFilepath f of
     Nothing -> pure Nothing
     Just day -> do
       s <- readFileText f
-      pure $ (day,) <$> Org.org s
+      case Org.org s of
+        Nothing -> pure Nothing
+        Just orgFile -> do
+          let measures = parseMeasures $ Org.orgMeta orgFile
+          pure $ Just (day, (orgFile, measures))
 
 parseDailyNoteFilepath :: FilePath -> Maybe Day
 parseDailyNoteFilepath f =
   parseDay . toString =<< T.stripSuffix ".org" (toText $ takeFileName f)
-
-type Diary = Map Day OrgFile
 
 diaryFrom :: FilePath -> IO Diary
 diaryFrom folder = do
