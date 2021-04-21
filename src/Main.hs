@@ -7,6 +7,7 @@ import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
 import qualified Data.Org as Org
 import qualified Data.Set as Set
+import Data.Time.Calendar (addDays)
 import Ema.App (runEma)
 import qualified Ema.Layout as Layout
 import Ema.Route (IsRoute (routeUrl))
@@ -45,10 +46,22 @@ mainWith folder = do
               heading "My Diary"
               H.div ! A.class_ "" $
                 forM_ (sortOn Down $ Map.keys diary) $ \day ->
-                  H.li $ routeElem (OnDay day) $ H.toMarkup @Text (show day)
+                  H.li $ routeDay day
             OnDay day -> do
               heading $ show day
               routeElem Index "Back to Index"
+              H.div ! A.class_ "text-center text-3xl " $ do
+                let yesterday = addDays (-1) day
+                    tomorrow = addDays 1 day
+                    renderOtherDay oDay =
+                      if Map.member oDay diary
+                        then routeDay oDay
+                        else H.span ! A.class_ "text-gray-200" $ H.toMarkup @Text (show oDay)
+                renderOtherDay yesterday
+                " | "
+                H.span ! A.class_ "font-bold" $ H.toMarkup @Text (show day)
+                " | "
+                renderOtherDay tomorrow
               maybe "not found" renderOrg (Map.lookup day diary)
           H.footer
             ! A.class_ "text-xs my-4 py-2 text-center bg-gray-200"
@@ -59,8 +72,10 @@ mainWith folder = do
                 ! A.target "blank_"
                 ! A.class_ "text-purple font-bold"
                 $ "memoir"
+    routeDay day =
+      routeElem (OnDay day) $ H.toMarkup @Text (show day)
     routeElem r w =
-      H.a ! A.class_ "text-xl text-purple-500 hover:underline" ! routeHref r $ w
+      H.a ! A.class_ "text-purple-500 hover:underline" ! routeHref r $ w
     routeHref r =
       A.href (fromString . toString $ routeUrl r)
 
