@@ -9,7 +9,7 @@ import qualified Data.Org as Org
 import qualified Data.Set as Set
 import Data.Time.Calendar (addDays)
 import Ema.App (runEma)
-import qualified Ema.Layout as Layout
+import qualified Ema.Helper.Tailwind as Tailwind
 import Ema.Route (IsRoute (routeUrl))
 import Memoir.Data (Diary)
 import qualified Memoir.Data as Data
@@ -34,50 +34,52 @@ mainWith folder = do
   flip runEma render $ \model -> do
     LVar.set model =<< Data.diaryFrom folder
     Data.watchAndUpdateDiary folder model
+
+render :: Diary -> Route -> LByteString
+render diary r =
+  Tailwind.layout (H.title "My Diary") $
+    H.div ! A.class_ "container mx-auto" $ do
+      let heading =
+            H.header
+              ! A.class_ "text-4xl my-2 py-2 font-bold text-center bg-purple-600 text-gray-100 shadow"
+      case r of
+        Index -> do
+          heading "My Diary"
+          H.div ! A.class_ "" $
+            forM_ (sortOn Down $ Map.keys diary) $ \day ->
+              H.li $ routeDay day
+        OnDay day -> do
+          heading $ show day
+          routeElem Index "Back to Index"
+          H.div ! A.class_ "text-center text-3xl " $ do
+            let yesterday = addDays (-1) day
+                tomorrow = addDays 1 day
+                renderOtherDay oDay =
+                  if Map.member oDay diary
+                    then routeDay oDay
+                    else H.span ! A.class_ "text-gray-200" $ H.toMarkup @Text (show oDay)
+            renderOtherDay yesterday
+            " | "
+            H.span ! A.class_ "font-bold" $ H.toMarkup @Text (show day)
+            " | "
+            renderOtherDay tomorrow
+          maybe "not found" renderOrg (Map.lookup day diary)
+      H.footer
+        ! A.class_ "text-xs my-4 py-2 text-center bg-gray-200"
+        $ do
+          "Powered by "
+          H.a
+            ! A.href "https://github.com/srid/memoir"
+            ! A.target "blank_"
+            ! A.class_ "text-purple font-bold"
+            $ "memoir"
   where
-    render (diary :: Diary) (r :: Route) =
-      Layout.tailwindSite (H.title "My Diary") $
-        H.div ! A.class_ "container mx-auto" $ do
-          let heading =
-                H.header
-                  ! A.class_ "text-4xl my-2 py-2 font-bold text-center bg-purple-600 text-gray-100 shadow"
-          case r of
-            Index -> do
-              heading "My Diary"
-              H.div ! A.class_ "" $
-                forM_ (sortOn Down $ Map.keys diary) $ \day ->
-                  H.li $ routeDay day
-            OnDay day -> do
-              heading $ show day
-              routeElem Index "Back to Index"
-              H.div ! A.class_ "text-center text-3xl " $ do
-                let yesterday = addDays (-1) day
-                    tomorrow = addDays 1 day
-                    renderOtherDay oDay =
-                      if Map.member oDay diary
-                        then routeDay oDay
-                        else H.span ! A.class_ "text-gray-200" $ H.toMarkup @Text (show oDay)
-                renderOtherDay yesterday
-                " | "
-                H.span ! A.class_ "font-bold" $ H.toMarkup @Text (show day)
-                " | "
-                renderOtherDay tomorrow
-              maybe "not found" renderOrg (Map.lookup day diary)
-          H.footer
-            ! A.class_ "text-xs my-4 py-2 text-center bg-gray-200"
-            $ do
-              "Powered by "
-              H.a
-                ! A.href "https://github.com/srid/memoir"
-                ! A.target "blank_"
-                ! A.class_ "text-purple font-bold"
-                $ "memoir"
     routeDay day =
       routeElem (OnDay day) $ H.toMarkup @Text (show day)
-    routeElem r w =
-      H.a ! A.class_ "text-purple-500 hover:underline" ! routeHref r $ w
-    routeHref r =
-      A.href (fromString . toString $ routeUrl r)
+    routeElem r' w =
+      H.a ! A.class_ "text-purple-500 hover:underline" ! routeHref r' $ w
+    routeHref r' =
+      A.href (fromString . toString $ routeUrl r')
 
 -- TODO: Move to separate module (after decoupling tailwind styling)
 -- Even make it a separate library, as long as CSS classes can be customized!
