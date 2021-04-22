@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Main where
@@ -12,34 +13,39 @@ import qualified Data.Org as Org
 import qualified Data.Set as Set
 import Data.Time
 import Data.Time.Extra
-import Ema.App (runEma)
+import Ema
+import qualified Ema.CLI
 import qualified Ema.Helper.Tailwind as Tailwind
-import Ema.Route (IsRoute, routeUrl)
-import Memoir.Data (Diary (diaryTags), diaryCal)
+import Memoir.Data (Diary (diaryTags), Route (..), diaryCal)
 import qualified Memoir.Data as Data
 import Memoir.Data.Measure
-import Memoir.Route (Route (..))
 import qualified Memoir.Widget.Icons as Icons
+import Options.Applicative
 import qualified Shower
-import System.Directory (canonicalizePath)
-import System.Environment (getArgs)
 import Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 
+data App = App
+  { appInputDir :: FilePath,
+    emaAction :: Ema.CLI.Action
+  }
+  deriving (Eq, Show)
+
+cliParser :: Options.Applicative.Parser App
+cliParser =
+  App <$> strOption (short 'd' <> help "Org-mode directory") <*> Ema.CLI.actionParser
+
 main :: IO ()
 main = do
-  folder <-
-    getArgs >>= \case
-      [_, path] -> canonicalizePath path
-      _ -> canonicalizePath "example"
-  mainWith folder
+  app <- execParser (info (cliParser <**> helper) mempty)
+  mainWith app
 
-mainWith :: FilePath -> IO ()
-mainWith folder = do
-  flip runEma render $ \model -> do
-    LVar.set model =<< Data.diaryFrom folder
-    Data.watchAndUpdateDiary folder model
+mainWith :: App -> IO ()
+mainWith App {..} = do
+  runEmaWithAction emaAction render $ \model -> do
+    LVar.set model =<< Data.diaryFrom appInputDir
+    Data.watchAndUpdateDiary appInputDir model
 
 render :: Diary -> Route -> LByteString
 render diary r =
@@ -98,7 +104,7 @@ routeDay :: Day -> H.Html
 routeDay day =
   routeElem (OnDay day) $ H.toMarkup @Text (show day)
 
-routeElem :: IsRoute r => r -> H.Html -> H.Html
+routeElem :: Ema a r => r -> H.Html -> H.Html
 routeElem r' = H.a ! A.class_ "text-purple-500 hover:underline" ! routeHref r'
 
 heading :: H.Html -> H.Html
@@ -125,7 +131,7 @@ renderDiaryListing cal = do
             Nothing -> td "" ""
             Just measure -> td "" $ renderMeasureValue measure
 
-routeHref :: IsRoute r => r -> H.Attribute
+routeHref :: Ema a r => r -> H.Attribute
 routeHref r' =
   A.href (fromString . toString $ routeUrl r')
 

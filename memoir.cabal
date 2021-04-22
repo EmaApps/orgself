@@ -48,6 +48,7 @@ executable memoir
     , tagged
     , text
     , time
+    , optparse-applicative
 
   mixins:
     base hiding (Prelude),
@@ -74,7 +75,6 @@ executable memoir
   other-modules:
     Memoir.Data
     Memoir.Data.Measure
-    Memoir.Route
     Memoir.Widget.Icons
     Data.Time.Extra
 

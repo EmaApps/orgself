@@ -55,6 +55,7 @@ extentP = do
     "full" -> pure ExtentFull
     x -> fail $ "Invalid value: " <> toString x
 
+-- TODO: Go back to regular ADTs. Don't think GADT is necessary.
 data Measure a where
   Measure_Rating5 :: Text -> Measure Rating5
   Measure_Extent :: Text -> Measure Extent

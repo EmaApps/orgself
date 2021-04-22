@@ -10,7 +10,9 @@ import Data.Org (OrgFile)
 import qualified Data.Org as Org
 import qualified Data.Set as Set
 import qualified Data.Text as T
-import Data.Time (Day, defaultTimeLocale, parseTimeM)
+import Data.Time (defaultTimeLocale, parseTimeM)
+import Data.Time.Calendar
+import Ema
 import Memoir.Data.Measure (Measures, parseMeasures)
 import System.FSNotify
   ( Event (..),
@@ -19,6 +21,34 @@ import System.FSNotify
   )
 import System.FilePath (takeFileName, (</>))
 import System.FilePattern.Directory (getDirectoryFiles)
+
+data Route
+  = Index
+  | OnDay Day
+  | Tag Text
+  deriving (Show)
+
+instance Ema Diary Route where
+  encodeRoute = \case
+    Index -> mempty
+    OnDay day ->
+      let (y, m, d) = toGregorian day
+       in [show y, show m, show d]
+    Tag tag ->
+      ["tag", fromString . toString $ tag]
+  decodeRoute = \case
+    [] -> Just Index
+    ["tag", tag] ->
+      Just $ Tag $ unSlug tag
+    [y, m, d] ->
+      OnDay <$> do
+        y' <- readMaybe @Integer (toString $ unSlug y)
+        m' <- readMaybe @Int (toString $ unSlug m)
+        d' <- readMaybe @Int (toString $ unSlug d)
+        fromGregorianValid y' m' d'
+    _ -> Nothing
+  modelRoutes diary =
+    Index : fmap OnDay (Map.keys $ diaryCal diary)
 
 data Diary = Diary
   { diaryCal :: Map Day (OrgFile, Measures),
