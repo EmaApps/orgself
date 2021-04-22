@@ -157,7 +157,7 @@ renderMeasureValue = \case
   Measure_Rating5 _name :=> Identity rating -> do
     let (x, y) = ratingSplit rating
     replicateM_ x $ Icons.starSolid "inline h-6 w-6"
-    replicateM_ y $ Icons.star "inline h-5 w-6"
+    replicateM_ y $ Icons.star "inline h-5 w-6 text-gray-300"
   Measure_Extent _name :=> Identity extent -> do
     case extent of
       ExtentFull -> Icons.rss "inline h-6 w-6"
