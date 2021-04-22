@@ -65,7 +65,7 @@ measureName = \case
   Some (Measure_Extent s) -> s
 
 parseMeasure :: Text -> Text -> DSum Measure Identity
-parseMeasure name s = fromMaybe (error $ "Unknown measure" <> name) $ do
+parseMeasure name s = fromMaybe (error $ "Unknown measure: " <> name) $ do
   asum
     [ (Measure_Rating5 name :=>) . Identity <$> M.parseMaybe ratings5P s,
       (Measure_Extent name :=>) . Identity <$> M.parseMaybe extentP s

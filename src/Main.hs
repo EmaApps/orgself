@@ -46,10 +46,16 @@ render diary r =
     H.div ! A.class_ "container mx-auto" $ do
       case r of
         Index -> do
-          renderDiaryListing "My Diary" (diaryCal diary)
+          heading "My Diary"
+          renderDiaryListing (diaryCal diary)
+          H.header "Tags"
+          forM_ (Map.toList $ diaryTags diary) $ \(tag, length -> n) ->
+            H.li $ do
+              renderTag tag
+              " (" <> show n <> ")"
         OnDay day -> do
-          routeElem Index "Back to Index"
           heading $ show day
+          routeElem Index "Back to Index"
           H.div ! A.class_ "text-center text-3xl " $ do
             let yesterday = addDays (-1) day
                 tomorrow = addDays 1 day
@@ -64,12 +70,13 @@ render diary r =
             renderOtherDay tomorrow
           maybe "not found" renderDay (Map.lookup day $ diaryCal diary)
         Tag tag -> do
+          heading $ H.toHtml $ "Days tagged with #" <> tag
           routeElem Index "Back to Index"
           case Map.lookup tag (diaryTags diary) of
             Nothing -> "Tag not found"
             Just days -> do
               let tagCal = Map.filterWithKey (\day _ -> Set.member day days) (diaryCal diary)
-              renderDiaryListing (H.toHtml $ "Days tagged with #" <> tag) tagCal
+              renderDiaryListing tagCal
       H.footer
         ! A.class_ "text-xs my-4 py-2 text-center bg-gray-200"
         $ do
@@ -92,9 +99,8 @@ heading =
   H.header
     ! A.class_ "text-4xl my-2 py-2 font-bold text-center bg-purple-600 text-gray-100 shadow"
 
-renderDiaryListing :: H.Html -> Map Day (OrgFile, Measures) -> H.Html
-renderDiaryListing h cal = do
-  heading h
+renderDiaryListing :: Map Day (OrgFile, Measures) -> H.Html
+renderDiaryListing cal = do
   H.div ! A.class_ "flex flex-col" $ do
     let usedMeasures = Set.toList $ Set.fromList $ concat $ Map.elems cal <&> \(_, measures) -> DMap.keys measures
         td cls = H.td ! A.class_ ("border px-4 py-2 " <> cls)
