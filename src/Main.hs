@@ -4,13 +4,14 @@
 module Main where
 
 import qualified Data.Dependent.Map as DMap
-import Data.Dependent.Sum
+import Data.Dependent.Sum (DSum (..))
 import qualified Data.LVar as LVar
 import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
 import qualified Data.Org as Org
 import qualified Data.Set as Set
-import Data.Time.Calendar (Day, addDays)
+import Data.Time
+import Data.Time.Extra
 import Ema.App (runEma)
 import qualified Ema.Helper.Tailwind as Tailwind
 import Ema.Route (IsRoute, routeUrl)
@@ -42,7 +43,7 @@ mainWith folder = do
 
 render :: Diary -> Route -> LByteString
 render diary r =
-  Tailwind.layout (H.title "My Diary") $
+  Tailwind.layout (H.title $ show r <> " -- My Diary") $
     H.div ! A.class_ "container mx-auto" $ do
       case r of
         Index -> do
@@ -54,20 +55,7 @@ render diary r =
               renderTag tag
               " (" <> show n <> ")"
         OnDay day -> do
-          heading $ show day
-          routeElem Index "Back to Index"
-          H.div ! A.class_ "text-center text-3xl " $ do
-            let yesterday = addDays (-1) day
-                tomorrow = addDays 1 day
-                renderOtherDay oDay =
-                  if Map.member oDay (diaryCal diary)
-                    then routeDay oDay
-                    else H.span ! A.class_ "text-gray-200" $ H.toMarkup @Text (show oDay)
-            renderOtherDay yesterday
-            " | "
-            H.span ! A.class_ "font-bold" $ H.toMarkup @Text (show day)
-            " | "
-            renderOtherDay tomorrow
+          renderWeekNav diary day
           maybe "not found" renderDay (Map.lookup day $ diaryCal diary)
         Tag tag -> do
           heading $ H.toHtml $ "Days tagged with #" <> tag
@@ -86,6 +74,25 @@ render diary r =
             ! A.target "blank_"
             ! A.class_ "text-purple font-bold"
             $ "memoir"
+
+renderWeekNav :: Diary -> Day -> H.Html
+renderWeekNav diary day = do
+  let a = firstDayOfWeekOnAfter Monday (addDays (-7) day)
+      b = firstDayOfWeekOnAfter Sunday day
+  H.div ! A.class_ "flex justify-evenly flex-wrap border-4 border-purple-600 bg-purple-50 my-2 text-2xl shadow" $ do
+    let item = H.span ! A.class_ "m-2"
+    item $ routeElem Index "🏠"
+    item ! A.title "Out of 00-53 weeks in a year" $ do
+      "W"
+      H.toHtml $ formatTime defaultTimeLocale "%V" day
+    forM_ [a .. b] $ \oDay -> item $ do
+      let s = formatTime defaultTimeLocale "%h %d %a" oDay
+      if Map.member oDay (diaryCal diary)
+        then
+          if oDay == day
+            then H.span ! A.class_ "font-bold" $ H.toMarkup s
+            else routeElem (OnDay oDay) $ H.toMarkup s
+        else H.span ! A.class_ "text-gray-400" $ H.toMarkup s
 
 routeDay :: Day -> H.Html
 routeDay day =
@@ -239,7 +246,7 @@ renderWords = \case
     if s `Set.member` Set.fromList ["TODO", "DONE"]
       then
         H.span
-          ! A.class_ "border-1 p-0.5 bg-gray-600 text-white"
+          ! A.class_ "border-1 p-0.5 bg-green-600 text-white"
           ! A.title "Keyword"
           $ H.toMarkup s
       else H.toMarkup s

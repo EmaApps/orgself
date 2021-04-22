@@ -76,5 +76,6 @@ executable memoir
     Memoir.Data.Measure
     Memoir.Route
     Memoir.Widget.Icons
+    Data.Time.Extra
 
   default-language:   Haskell2010
