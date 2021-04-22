@@ -8,6 +8,7 @@ import Ema.Route (IsRoute (..), Slug (unSlug))
 data Route
   = Index
   | OnDay Day
+  | Tag Text
   deriving (Show)
 
 instance IsRoute Route where
@@ -16,8 +17,12 @@ instance IsRoute Route where
     OnDay day ->
       let (y, m, d) = toGregorian day
        in [show y, show m, show d]
+    Tag tag ->
+      ["tag", fromString . toString $ tag]
   fromSlug = \case
     [] -> Just Index
+    ["tag", tag] ->
+      Just $ Tag $ unSlug tag
     [y, m, d] ->
       OnDay <$> do
         y' <- readMaybe @Integer (toString $ unSlug y)

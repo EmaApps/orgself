@@ -10,7 +10,6 @@ import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
 import qualified Data.Org as Org
 import qualified Data.Set as Set
-import Data.Some
 import Data.Time.Calendar (addDays)
 import Ema.App (runEma)
 import qualified Ema.Helper.Tailwind as Tailwind
@@ -52,7 +51,7 @@ render diary r =
         Index -> do
           heading "My Diary"
           H.div ! A.class_ "flex flex-col" $ do
-            let usedMeasures = Set.fromList $ concat $ Map.elems diary <&> \(_, measures) -> DMap.keys measures
+            let usedMeasures = Set.toList $ Set.fromList $ concat $ Map.elems diary <&> \(_, measures) -> DMap.keys measures
                 td cls = H.td ! A.class_ ("border px-4 py-2 " <> cls)
                 th cls = H.td ! A.class_ ("border px-4 py-2 " <> cls)
             -- Render diary index along with self-tracking measures, as a table.
@@ -64,13 +63,9 @@ render diary r =
               forM_ (sortOn (Down . fst) $ Map.toList diary) $ \(day, (_, dayMeasures)) -> do
                 H.tr $ do
                   th "font-bold" $ routeDay day
-                  forM_ usedMeasures $ \m -> do
-                    let isCurr = \case
-                          Measure_Extent s :=> Identity _ -> m == Some (Measure_Extent s)
-                          Measure_Rating5 s :=> Identity _ -> m == Some (Measure_Rating5 s)
-                    case find isCurr (DMap.assocs dayMeasures) of
-                      Nothing -> td "" ""
-                      Just measure -> td "" $ renderMeasureValue measure
+                  forM_ (flip lookupMeasure dayMeasures <$> usedMeasures) $ \case
+                    Nothing -> td "" ""
+                    Just measure -> td "" $ renderMeasureValue measure
         OnDay day -> do
           heading $ show day
           routeElem Index "Back to Index"
@@ -87,6 +82,8 @@ render diary r =
             " | "
             renderOtherDay tomorrow
           maybe "not found" renderDay (Map.lookup day diary)
+        Tag _tag -> do
+          "TODO"
       H.footer
         ! A.class_ "text-xs my-4 py-2 text-center bg-gray-200"
         $ do
@@ -101,8 +98,9 @@ render diary r =
       routeElem (OnDay day) $ H.toMarkup @Text (show day)
     routeElem r' w =
       H.a ! A.class_ "text-purple-500 hover:underline" ! routeHref r' $ w
-    routeHref r' =
-      A.href (fromString . toString $ routeUrl r')
+
+routeHref r' =
+  A.href (fromString . toString $ routeUrl r')
 
 renderDay :: (OrgFile, Measures) -> H.Html
 renderDay (orgFile, measures) = do
@@ -191,9 +189,10 @@ itemHoverClass = "bg-purple-100"
 
 renderTag :: Text -> H.Html
 renderTag tag =
-  H.span
-    ! A.class_ "border-1 p-0.5 bg-purple-200 font-bold rounded"
+  H.a
+    ! A.class_ "border-1 p-0.5 bg-purple-200 font-bold rounded hover:bg-green-200"
     ! A.title "Tag"
+    ! routeHref (Tag tag)
     $ H.toMarkup tag
 
 renderWordsList :: Foldable f => f Org.Words -> H.Markup
@@ -209,7 +208,7 @@ renderWords = \case
   Org.Verbatim s -> H.code (H.toHtml s)
   Org.Strike s -> H.del (H.toHtml s)
   Org.Link (Org.URL url) ms ->
-    H.a ! A.href (hrefAttr url) $ maybe "" H.toHtml ms
+    H.a ! A.class_ "text-purple-700 hover:font-bold" ! A.href (hrefAttr url) $ maybe "" H.toHtml ms
   Org.Image (Org.URL url) ->
     H.img ! A.src (hrefAttr url)
   Org.Tags tags ->

@@ -64,18 +64,27 @@ measureName = \case
   Some (Measure_Rating5 s) -> s
   Some (Measure_Extent s) -> s
 
-parseMeasure :: Text -> Text -> Maybe (DSum Measure Identity)
-parseMeasure name s = do
+parseMeasure :: Text -> Text -> DSum Measure Identity
+parseMeasure name s = fromMaybe (error $ "Unknown measure" <> name) $ do
   asum
     [ (Measure_Rating5 name :=>) . Identity <$> M.parseMaybe ratings5P s,
       (Measure_Extent name :=>) . Identity <$> M.parseMaybe extentP s
     ]
 
+lookupMeasure :: Some Measure -> Measures -> Maybe (DSum Measure Identity)
+lookupMeasure m =
+  find (\x -> m == someMeasure x) . DMap.assocs
+  where
+    someMeasure :: DSum Measure Identity -> Some Measure
+    someMeasure = \case
+      x@(Measure_Rating5 _) :=> Identity _ -> Some x
+      x@(Measure_Extent _) :=> Identity _ -> Some x
+
 type Measures = DMap Measure Identity
 
 parseMeasures :: Map Text Text -> Measures
 parseMeasures =
-  DMap.fromList . Prelude.mapMaybe (uncurry parseMeasure) . Map.toList
+  DMap.fromList . fmap (uncurry parseMeasure) . Map.toList
 
 deriveGEq ''Measure
 deriveGCompare ''Measure
