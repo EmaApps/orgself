@@ -10,11 +10,11 @@ import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
 import qualified Data.Org as Org
 import qualified Data.Set as Set
-import Data.Time.Calendar (addDays)
+import Data.Time.Calendar (Day, addDays)
 import Ema.App (runEma)
 import qualified Ema.Helper.Tailwind as Tailwind
 import Ema.Route (IsRoute (routeUrl))
-import Memoir.Data (Diary, diaryCal)
+import Memoir.Data (Diary (diaryTags), diaryCal)
 import qualified Memoir.Data as Data
 import Memoir.Data.Measure
 import Memoir.Route (Route (..))
@@ -44,31 +44,12 @@ render :: Diary -> Route -> LByteString
 render diary r =
   Tailwind.layout (H.title "My Diary") $
     H.div ! A.class_ "container mx-auto" $ do
-      let heading =
-            H.header
-              ! A.class_ "text-4xl my-2 py-2 font-bold text-center bg-purple-600 text-gray-100 shadow"
       case r of
         Index -> do
-          heading "My Diary"
-          H.div ! A.class_ "flex flex-col" $ do
-            let usedMeasures = Set.toList $ Set.fromList $ concat $ Map.elems (diaryCal diary) <&> \(_, measures) -> DMap.keys measures
-                td cls = H.td ! A.class_ ("border px-4 py-2 " <> cls)
-                th cls = H.td ! A.class_ ("border px-4 py-2 " <> cls)
-            -- Render diary index along with self-tracking measures, as a table.
-            H.table ! A.class_ "table-auto" $ do
-              H.tr ! A.class_ "bg-gray-50" $ do
-                th "" ""
-                forM_ usedMeasures $ \m -> do
-                  th "font-bold" $ H.toHtml $ measureName m
-              forM_ (sortOn (Down . fst) $ Map.toList $ diaryCal diary) $ \(day, (_, dayMeasures)) -> do
-                H.tr $ do
-                  th "font-bold" $ routeDay day
-                  forM_ (flip lookupMeasure dayMeasures <$> usedMeasures) $ \case
-                    Nothing -> td "" ""
-                    Just measure -> td "" $ renderMeasureValue measure
+          renderDiaryListing "My Diary" (diaryCal diary)
         OnDay day -> do
-          heading $ show day
           routeElem Index "Back to Index"
+          heading $ show day
           H.div ! A.class_ "text-center text-3xl " $ do
             let yesterday = addDays (-1) day
                 tomorrow = addDays 1 day
@@ -82,8 +63,13 @@ render diary r =
             " | "
             renderOtherDay tomorrow
           maybe "not found" renderDay (Map.lookup day $ diaryCal diary)
-        Tag _tag -> do
-          "TODO"
+        Tag tag -> do
+          routeElem Index "Back to Index"
+          case Map.lookup tag (diaryTags diary) of
+            Nothing -> "Tag not found"
+            Just days -> do
+              let tagCal = Map.filterWithKey (\day _ -> Set.member day days) (diaryCal diary)
+              renderDiaryListing (H.toHtml $ "Days tagged with #" <> tag) tagCal
       H.footer
         ! A.class_ "text-xs my-4 py-2 text-center bg-gray-200"
         $ do
@@ -93,11 +79,38 @@ render diary r =
             ! A.target "blank_"
             ! A.class_ "text-purple font-bold"
             $ "memoir"
-  where
-    routeDay day =
-      routeElem (OnDay day) $ H.toMarkup @Text (show day)
-    routeElem r' w =
-      H.a ! A.class_ "text-purple-500 hover:underline" ! routeHref r' $ w
+
+routeDay :: Day -> H.Html
+routeDay day =
+  routeElem (OnDay day) $ H.toMarkup @Text (show day)
+
+routeElem :: IsRoute r => r -> H.Html -> H.Html
+routeElem r' = H.a ! A.class_ "text-purple-500 hover:underline" ! routeHref r'
+
+heading :: H.Html -> H.Html
+heading =
+  H.header
+    ! A.class_ "text-4xl my-2 py-2 font-bold text-center bg-purple-600 text-gray-100 shadow"
+
+renderDiaryListing :: H.Html -> Map Day (OrgFile, Measures) -> H.Html
+renderDiaryListing h cal = do
+  heading h
+  H.div ! A.class_ "flex flex-col" $ do
+    let usedMeasures = Set.toList $ Set.fromList $ concat $ Map.elems cal <&> \(_, measures) -> DMap.keys measures
+        td cls = H.td ! A.class_ ("border px-4 py-2 " <> cls)
+        th cls = H.td ! A.class_ ("border px-4 py-2 " <> cls)
+    -- Render diary index along with self-tracking measures, as a table.
+    H.table ! A.class_ "table-auto" $ do
+      H.tr ! A.class_ "bg-gray-50" $ do
+        th "" ""
+        forM_ usedMeasures $ \m -> do
+          th "font-bold" $ H.toHtml $ measureName m
+      forM_ (sortOn (Down . fst) $ Map.toList cal) $ \(day, (_, dayMeasures)) -> do
+        H.tr $ do
+          th "font-bold" $ routeDay day
+          forM_ (flip lookupMeasure dayMeasures <$> usedMeasures) $ \case
+            Nothing -> td "" ""
+            Just measure -> td "" $ renderMeasureValue measure
 
 routeHref :: IsRoute r => r -> H.Attribute
 routeHref r' =
@@ -112,8 +125,7 @@ renderDay (orgFile, measures) = do
 -- Even make it a separate library, as long as CSS classes can be customized!
 renderOrg :: OrgFile -> H.Html
 renderOrg _org@(Org.OrgFile _meta doc) = do
-  let heading = H.header ! A.class_ "text-2xl my-2 font-bold"
-  heading "Doc"
+  H.header ! A.class_ "text-2xl my-2 font-bold" $ "Doc"
   -- renderAST "AST" org
   renderOrgDoc doc
 
@@ -175,10 +187,10 @@ renderBlock blk = case blk of
   Org.Paragraph ws -> H.p $ renderWordsList ws
 
 renderSection :: Org.Section -> H.Html
-renderSection (Org.Section heading tags (Org.OrgDoc blocks sections)) = do
+renderSection (Org.Section h tags (Org.OrgDoc blocks sections)) = do
   H.li ! A.class_ "my-2" $ do
     H.div ! A.class_ ("py-1 text-xl cursor-default " <> "hover:" <> itemHoverClass) $ do
-      renderWordsList heading
+      renderWordsList h
       forM_ tags renderTag
       whenNotNull blocks $ \_ -> do
         H.div ! A.class_ "border-l-2 pl-2 text-gray-700 bg-gray-50 mt-2" $

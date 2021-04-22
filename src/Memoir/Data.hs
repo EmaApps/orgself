@@ -8,6 +8,7 @@ import qualified Data.LVar as LVar
 import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
 import qualified Data.Org as Org
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Time (Day, defaultTimeLocale, parseTimeM)
 import Memoir.Data.Measure (Measures, parseMeasures)
@@ -21,7 +22,7 @@ import System.FilePattern.Directory (getDirectoryFiles)
 
 data Diary = Diary
   { diaryCal :: Map Day (OrgFile, Measures),
-    diaryTags :: Map Text (NonEmpty Day)
+    diaryTags :: Map Text (Set Day)
   }
   deriving (Eq)
 
@@ -33,20 +34,38 @@ data DiaryUpdate
   | DiaryDel Day
   deriving (Eq)
 
--- TODO: Update @diaryTags@ !
 diaryUpdate :: DiaryUpdate -> Diary -> Diary
 diaryUpdate action diary =
   case action of
     DiaryAdd day orgFile ->
       diary
         { diaryCal =
-            Map.insert day (orgFile, parseMeasures $ Org.orgMeta orgFile) $ diaryCal diary
+            Map.insert day (orgFile, parseMeasures $ Org.orgMeta orgFile) $ diaryCal diary,
+          diaryTags = foldl' (addTag day) (diaryTags diary) (extractTags orgFile)
         }
     DiaryDel day ->
       diary
         { diaryCal =
-            Map.delete day $ diaryCal diary
+            Map.delete day $ diaryCal diary,
+          diaryTags =
+            maybe
+              (diaryTags diary)
+              (foldl' (delTag day) (diaryTags diary) . extractTags . fst)
+              (Map.lookup day $ diaryCal diary)
         }
+  where
+    addTag :: Day -> Map Text (Set Day) -> Text -> Map Text (Set Day)
+    addTag v m k =
+      let vs = fromMaybe mempty $ Map.lookup k m
+       in Map.insert k (Set.insert v vs) m
+    delTag :: Day -> Map Text (Set Day) -> Text -> Map Text (Set Day)
+    delTag v m k =
+      case Map.lookup k m of
+        Nothing -> m
+        Just vs ->
+          if Set.member v vs
+            then Map.insert k (Set.delete v vs) m
+            else m
 
 parseDay :: String -> Maybe Day
 parseDay =
@@ -97,3 +116,26 @@ watchAndUpdateDiary folder model = do
         Unknown fp _ _ -> updateFile fp
     threadDelay maxBound
       `finally` stop
+
+extractTags :: OrgFile -> Set Text
+extractTags (Org.OrgFile _meta (Org.OrgDoc blocks sections)) =
+  foldMap fromBlocks blocks <> foldMap fromSections sections
+  where
+    fromSections :: Org.Section -> Set Text
+    fromSections (Org.Section heading tags (Org.OrgDoc bs ss)) =
+      Set.fromList tags
+        <> foldMap fromWords heading
+        <> foldMap fromBlocks bs
+        <> foldMap fromSections ss
+
+    fromBlocks :: Org.Block -> Set Text
+    fromBlocks = \case
+      Org.Paragraph ws ->
+        foldMap fromWords ws
+      _ ->
+        mempty
+
+    fromWords :: Org.Words -> Set Text
+    fromWords = \case
+      Org.Tags ts -> Set.fromList (toList ts)
+      _ -> mempty
