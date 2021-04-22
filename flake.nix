@@ -1,7 +1,7 @@
 {
   description = "Memoir";
   inputs = {
-    ema.url = "github:srid/ema/82b3fc826a7fad95caff63cc4c35868838ec0642";
+    ema.url = "github:srid/ema/7c7df0cb63fc0f996abd10c3ac4f370e9823ce4d";
     # FIXME: uncommenting this gives,
     #   error: in pure evaluation mode, 'fetchTarball' requires a 'sha256' argument
     # nixpkgs.follows = "ema";

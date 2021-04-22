@@ -13,7 +13,7 @@ import qualified Data.Set as Set
 import Data.Time.Calendar (Day, addDays)
 import Ema.App (runEma)
 import qualified Ema.Helper.Tailwind as Tailwind
-import Ema.Route (IsRoute (routeUrl))
+import Ema.Route (IsRoute, routeUrl)
 import Memoir.Data (Diary (diaryTags), diaryCal)
 import qualified Memoir.Data as Data
 import Memoir.Data.Measure
@@ -190,7 +190,7 @@ renderBlock blk = case blk of
           whenJust msub $ \listItems ->
             renderBlock $ Org.List listItems
   Org.Table _rows -> renderAST "TODO: Table" blk
-  Org.Paragraph ws -> H.p $ renderWordsList ws
+  Org.Paragraph ws -> H.p ! A.class_ "py-1" $ renderWordsList ws
 
 renderSection :: Org.Section -> H.Html
 renderSection (Org.Section h tags (Org.OrgDoc blocks sections)) = do
