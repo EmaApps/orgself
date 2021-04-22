@@ -14,7 +14,7 @@ import Data.Time.Calendar (addDays)
 import Ema.App (runEma)
 import qualified Ema.Helper.Tailwind as Tailwind
 import Ema.Route (IsRoute (routeUrl))
-import Memoir.Data (Diary)
+import Memoir.Data (Diary, diaryCal)
 import qualified Memoir.Data as Data
 import Memoir.Data.Measure
 import Memoir.Route (Route (..))
@@ -51,7 +51,7 @@ render diary r =
         Index -> do
           heading "My Diary"
           H.div ! A.class_ "flex flex-col" $ do
-            let usedMeasures = Set.toList $ Set.fromList $ concat $ Map.elems diary <&> \(_, measures) -> DMap.keys measures
+            let usedMeasures = Set.toList $ Set.fromList $ concat $ Map.elems (diaryCal diary) <&> \(_, measures) -> DMap.keys measures
                 td cls = H.td ! A.class_ ("border px-4 py-2 " <> cls)
                 th cls = H.td ! A.class_ ("border px-4 py-2 " <> cls)
             -- Render diary index along with self-tracking measures, as a table.
@@ -60,7 +60,7 @@ render diary r =
                 th "" ""
                 forM_ usedMeasures $ \m -> do
                   th "font-bold" $ H.toHtml $ measureName m
-              forM_ (sortOn (Down . fst) $ Map.toList diary) $ \(day, (_, dayMeasures)) -> do
+              forM_ (sortOn (Down . fst) $ Map.toList $ diaryCal diary) $ \(day, (_, dayMeasures)) -> do
                 H.tr $ do
                   th "font-bold" $ routeDay day
                   forM_ (flip lookupMeasure dayMeasures <$> usedMeasures) $ \case
@@ -73,7 +73,7 @@ render diary r =
             let yesterday = addDays (-1) day
                 tomorrow = addDays 1 day
                 renderOtherDay oDay =
-                  if Map.member oDay diary
+                  if Map.member oDay (diaryCal diary)
                     then routeDay oDay
                     else H.span ! A.class_ "text-gray-200" $ H.toMarkup @Text (show oDay)
             renderOtherDay yesterday
@@ -81,7 +81,7 @@ render diary r =
             H.span ! A.class_ "font-bold" $ H.toMarkup @Text (show day)
             " | "
             renderOtherDay tomorrow
-          maybe "not found" renderDay (Map.lookup day diary)
+          maybe "not found" renderDay (Map.lookup day $ diaryCal diary)
         Tag _tag -> do
           "TODO"
       H.footer
@@ -99,6 +99,7 @@ render diary r =
     routeElem r' w =
       H.a ! A.class_ "text-purple-500 hover:underline" ! routeHref r' $ w
 
+routeHref :: IsRoute r => r -> H.Attribute
 routeHref r' =
   A.href (fromString . toString $ routeUrl r')
 

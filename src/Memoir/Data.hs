@@ -19,13 +19,40 @@ import System.FSNotify
 import System.FilePath (takeFileName, (</>))
 import System.FilePattern.Directory (getDirectoryFiles)
 
-type Diary = Map Day (OrgFile, Measures)
+data Diary = Diary
+  { diaryCal :: Map Day (OrgFile, Measures),
+    diaryTags :: Map Text (NonEmpty Day)
+  }
+  deriving (Eq)
+
+emptyDiary :: Diary
+emptyDiary = Diary mempty mempty
+
+data DiaryUpdate
+  = DiaryAdd Day OrgFile
+  | DiaryDel Day
+  deriving (Eq)
+
+-- TODO: Update @diaryTags@ !
+diaryUpdate :: DiaryUpdate -> Diary -> Diary
+diaryUpdate action diary =
+  case action of
+    DiaryAdd day orgFile ->
+      diary
+        { diaryCal =
+            Map.insert day (orgFile, parseMeasures $ Org.orgMeta orgFile) $ diaryCal diary
+        }
+    DiaryDel day ->
+      diary
+        { diaryCal =
+            Map.delete day $ diaryCal diary
+        }
 
 parseDay :: String -> Maybe Day
 parseDay =
   parseTimeM False defaultTimeLocale "%Y-%m-%d"
 
-parseDailyNote :: FilePath -> IO (Maybe (Day, (OrgFile, Measures)))
+parseDailyNote :: FilePath -> IO (Maybe (Day, OrgFile))
 parseDailyNote f =
   case parseDailyNoteFilepath f of
     Nothing -> pure Nothing
@@ -33,9 +60,7 @@ parseDailyNote f =
       s <- readFileText f
       case Org.org s of
         Nothing -> pure Nothing
-        Just orgFile -> do
-          let measures = parseMeasures $ Org.orgMeta orgFile
-          pure $ Just (day, (orgFile, measures))
+        Just orgFile -> pure $ Just (day, orgFile)
 
 parseDailyNoteFilepath :: FilePath -> Maybe Day
 parseDailyNoteFilepath f =
@@ -45,7 +70,9 @@ diaryFrom :: FilePath -> IO Diary
 diaryFrom folder = do
   putStrLn $ "Loading .org files from " <> folder
   fs <- getDirectoryFiles folder (one "*.org")
-  Map.fromList . catMaybes <$> forM fs (parseDailyNote . (folder </>))
+  updates <- fmap (uncurry DiaryAdd) . catMaybes <$> forM fs (parseDailyNote . (folder </>))
+  let diary = foldl' (flip diaryUpdate) emptyDiary updates
+  pure diary
 
 watchAndUpdateDiary :: FilePath -> LVar.LVar Diary -> IO ()
 watchAndUpdateDiary folder model = do
@@ -58,11 +85,11 @@ watchAndUpdateDiary folder model = do
               Nothing -> pure ()
               Just (day, org) -> do
                 putStrLn $ "Update: " <> show day
-                LVar.modify model $ Map.insert day org
+                LVar.modify model $ diaryUpdate $ DiaryAdd day org
           deleteFile fp = do
             whenJust (parseDailyNoteFilepath fp) $ \day -> do
               putStrLn $ "Delete: " <> show day
-              LVar.modify model $ Map.delete day
+              LVar.modify model $ diaryUpdate $ DiaryDel day
       case event of
         Added fp _ isDir -> unless isDir $ updateFile fp
         Modified fp _ isDir -> unless isDir $ updateFile fp
