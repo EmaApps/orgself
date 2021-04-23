@@ -247,15 +247,20 @@ renderWords = \case
     forM_ tags renderTag
   Org.Punct c ->
     H.toHtml c
-  Org.Plain s ->
+  Org.Plain s -> do
     -- `org-mode` library doedn't parse these; until then, we handle them here.
-    if s `Set.member` Set.fromList ["TODO", "DONE"]
-      then
+    let specialWordColors =
+          Map.fromList
+            [ ("TODO", "bg-red-600"),
+              ("DONE", "bg-green-600")
+            ]
+    case Map.lookup s specialWordColors of
+      Nothing -> H.toMarkup s
+      Just clr ->
         H.span
-          ! A.class_ "border-1 p-0.5 bg-green-600 text-white"
+          ! A.class_ ("border-1 p-0.5 text-white " <> clr)
           ! A.title "Keyword"
           $ H.toMarkup s
-      else H.toMarkup s
   where
     hrefAttr url =
       fromString . toString $ url
