@@ -2,6 +2,8 @@
 
 Create beautiful journal websites with self-tracking. Using org-mode. Based on [ema](https://github.com/srid/ema).
 
+<img width="100%" src="./orgself.png">
+
 ## Running
 
 ```bash
