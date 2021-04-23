@@ -1,5 +1,5 @@
 {
-  description = "Memoir";
+  description = "OrgSelf";
   inputs = {
     ema.url = "github:srid/ema/9f5222ce27ec1bf5fbb3175044033719c7b1a352";
     # FIXME: uncommenting this gives,
@@ -23,7 +23,7 @@
         project = returnShellEnv:
           pkgs.haskellPackages.developPackage {
             inherit returnShellEnv;
-            name = "memoir";
+            name = "orgself";
             root = ./.;
             withHoogle = false;
             overrides = self: super: with pkgs.haskell.lib; {

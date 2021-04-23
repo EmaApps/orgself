@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Memoir.Data where
+module OrgSelf.Data where
 
 import Control.Concurrent (threadDelay)
 import Control.Exception (finally)
@@ -13,7 +13,7 @@ import qualified Data.Text as T
 import Data.Time (defaultTimeLocale, parseTimeM)
 import Data.Time.Calendar
 import Ema
-import Memoir.Data.Measure (Measures, parseMeasures)
+import OrgSelf.Data.Measure (Measures, parseMeasures)
 import System.FSNotify
   ( Event (..),
     watchDir,

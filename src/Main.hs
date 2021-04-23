@@ -16,11 +16,11 @@ import Data.Time.Extra
 import Ema
 import qualified Ema.CLI
 import qualified Ema.Helper.Tailwind as Tailwind
-import Memoir.Data (Diary (diaryTags), Route (..), diaryCal)
-import qualified Memoir.Data as Data
-import Memoir.Data.Measure
-import qualified Memoir.Widget.Icons as Icons
 import Options.Applicative
+import OrgSelf.Data (Diary (diaryTags), Route (..), diaryCal)
+import qualified OrgSelf.Data as Data
+import OrgSelf.Data.Measure
+import qualified OrgSelf.Widget.Icons as Icons
 import qualified Shower
 import Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
@@ -76,10 +76,10 @@ render diary r =
         $ do
           "Powered by "
           H.a
-            ! A.href "https://github.com/srid/memoir"
+            ! A.href "https://github.com/srid/orgself"
             ! A.target "blank_"
             ! A.class_ "text-purple font-bold"
-            $ "memoir"
+            $ "orgself"
 
 renderWeekNav :: Diary -> Day -> H.Html
 renderWeekNav diary day = do

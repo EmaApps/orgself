@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Memoir.Data.Measure where
+module OrgSelf.Data.Measure where
 
 import Data.Constraint.Extras.TH (deriveArgDict)
 import Data.Dependent.Map (DMap)

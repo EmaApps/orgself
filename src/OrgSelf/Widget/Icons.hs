@@ -1,7 +1,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Memoir.Widget.Icons where
+module OrgSelf.Widget.Icons where
 
 import NeatInterpolation (text)
 import qualified Text.Blaze.Html5 as H
