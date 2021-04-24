@@ -47,9 +47,9 @@ mainWith App {..} = do
     LVar.set model =<< Data.diaryFrom appInputDir
     Data.watchAndUpdateDiary appInputDir model
 
-render :: Diary -> Route -> LByteString
-render diary r =
-  Tailwind.layout (H.title $ show r <> " -- My Diary") $
+render :: Ema.CLI.Action -> Diary -> Route -> LByteString
+render emaAction diary r =
+  Tailwind.layout emaAction (H.title $ show r <> " -- My Diary") $
     H.div ! A.class_ "container mx-auto" $ do
       case r of
         Index -> do

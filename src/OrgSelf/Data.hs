@@ -47,7 +47,7 @@ instance Ema Diary Route where
         d' <- readMaybe @Int (toString $ unSlug d)
         fromGregorianValid y' m' d'
     _ -> Nothing
-  modelRoutes diary =
+  staticRoutes diary =
     Index : fmap OnDay (Map.keys $ diaryCal diary)
 
 data Diary = Diary
