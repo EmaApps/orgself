@@ -65,8 +65,8 @@ measureName = \case
   Some (Measure_Rating5 s) -> s
   Some (Measure_Extent s) -> s
 
-parseMeasure :: Text -> Text -> Maybe (DSum Measure Identity)
-parseMeasure name s = do
+parseMeasure :: Text -> Text -> DSum Measure Identity
+parseMeasure name s = fromMaybe (error $ "Bad measure: " <> name) $ do
   asum
     [ (Measure_Rating5 name :=>) . Identity <$> M.parseMaybe ratings5P s,
       (Measure_Extent name :=>) . Identity <$> M.parseMaybe extentP s
@@ -85,7 +85,7 @@ type Measures = DMap Measure Identity
 
 parseMeasures :: Map Text Text -> Measures
 parseMeasures =
-  DMap.fromList . mapMaybe (uncurry parseMeasure) . Map.toList
+  DMap.fromList . fmap (uncurry parseMeasure) . Map.toList
 
 deriveGEq ''Measure
 deriveGCompare ''Measure
