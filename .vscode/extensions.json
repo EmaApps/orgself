@@ -4,6 +4,7 @@
 	"recommendations": [
 		"haskell.haskell",
 		"arrterian.nix-env-selector",
-		"bbenoist.nix"
+		"bbenoist.nix",
+		"jnoortheen.nix-ide"
 	]
 }
