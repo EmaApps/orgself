@@ -34,13 +34,12 @@ executable orgself
     , dependent-sum-template
     , directory
     , ema
-    , lvar
     , filepath
     , filepattern
-    , fsnotify
+    , lvar
     , megaparsec
-    , neat-interpolation
     , monad-logger
+    , neat-interpolation
     , org-mode
     , parser-combinators
     , relude
@@ -50,6 +49,7 @@ executable orgself
     , tagged
     , text
     , time
+    , unliftio
 
   mixins:
     base hiding (Prelude),

@@ -2,8 +2,7 @@
 
 module OrgSelf.Data where
 
-import Control.Concurrent (threadDelay)
-import Control.Exception (finally)
+import Control.Monad.Logger
 import qualified Data.LVar as LVar
 import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
@@ -13,15 +12,10 @@ import qualified Data.Text as T
 import Data.Time (defaultTimeLocale, parseTimeM)
 import Data.Time.Calendar
 import Ema
+import qualified Ema.Helper.FileSystem as FileSystem
 import OrgSelf.Data.Measure (Measures, parseMeasures)
-import System.FSNotify
-  ( Event (..),
-    watchDir,
-    withManager,
-  )
 import System.FilePath (takeFileName, (</>))
-import Control.Monad.Logger
-import System.FilePattern.Directory (getDirectoryFiles)
+import UnliftIO (MonadUnliftIO)
 
 data Route
   = Index
@@ -119,34 +113,25 @@ parseDailyNoteFilepath f =
 diaryFrom :: (MonadIO m, MonadLogger m) => FilePath -> m Diary
 diaryFrom folder = do
   logInfoN $ "Loading .org files from " <> toText folder
-  fs <- liftIO $ getDirectoryFiles folder (one "*.org")
+  fs <- FileSystem.filesMatching folder ["*.org"]
   updates <- fmap (uncurry DiaryAdd) . catMaybes <$> forM fs (parseDailyNote . (folder </>))
   let diary = foldl' (flip diaryUpdate) emptyDiary updates
   pure diary
 
-watchAndUpdateDiary :: (MonadIO m, MonadLogger m) => FilePath -> LVar.LVar Diary -> m ()
+watchAndUpdateDiary :: (MonadIO m, MonadLogger m, MonadUnliftIO m) => FilePath -> LVar.LVar Diary -> m ()
 watchAndUpdateDiary folder model = do
   logInfoN $ "Watching .org files in " <> toText folder
-  liftIO $ withManager $ \mgr -> do
-    stop <- watchDir mgr folder (const True) $ \event -> do
-      print event
-      let updateFile fp = do
-            parseDailyNote fp >>= \case
-              Nothing -> pure ()
-              Just (day, org) -> do
-                putStrLn $ "Update: " <> show day
-                LVar.modify model $ diaryUpdate $ DiaryAdd day org
-          deleteFile fp = do
-            whenJust (parseDailyNoteFilepath fp) $ \day -> do
-              putStrLn $ "Delete: " <> show day
-              LVar.modify model $ diaryUpdate $ DiaryDel day
-      case event of
-        Added fp _ isDir -> unless isDir $ updateFile fp
-        Modified fp _ isDir -> unless isDir $ updateFile fp
-        Removed fp _ isDir -> unless isDir $ deleteFile fp
-        Unknown fp _ _ -> updateFile fp
-    threadDelay maxBound
-      `finally` stop
+  FileSystem.onChange folder $ \fp -> \case
+    FileSystem.Update ->
+      parseDailyNote fp >>= \case
+        Nothing -> pure ()
+        Just (day, org) -> do
+          putStrLn $ "Update: " <> show day
+          LVar.modify model $ diaryUpdate $ DiaryAdd day org
+    FileSystem.Delete ->
+      whenJust (parseDailyNoteFilepath fp) $ \day -> do
+        putStrLn $ "Delete: " <> show day
+        LVar.modify model $ diaryUpdate $ DiaryDel day
 
 extractTags :: OrgFile -> Set Text
 extractTags (Org.OrgFile _meta (Org.OrgDoc blocks sections)) =
