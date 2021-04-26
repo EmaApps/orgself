@@ -16,7 +16,6 @@ import Data.Time.Extra
 import Ema
 import qualified Ema.CLI
 import qualified Ema.Helper.Tailwind as Tailwind
-import Options.Applicative
 import OrgSelf.Data (Diary (diaryTags), Route (..), diaryCal)
 import qualified OrgSelf.Data as Data
 import OrgSelf.Data.Measure
@@ -26,26 +25,11 @@ import Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
 
-data App = App
-  { appInputDir :: FilePath,
-    emaAction :: Ema.CLI.Action
-  }
-  deriving (Eq, Show)
-
-cliParser :: Options.Applicative.Parser App
-cliParser =
-  App <$> strOption (short 'd' <> help "Org-mode directory") <*> Ema.CLI.actionParser
-
 main :: IO ()
 main = do
-  app <- execParser (info (cliParser <**> helper) mempty)
-  mainWith app
-
-mainWith :: App -> IO ()
-mainWith App {..} = do
-  runEmaWithAction emaAction render $ \model -> do
-    LVar.set model =<< Data.diaryFrom appInputDir
-    Data.watchAndUpdateDiary appInputDir model
+  runEma render $ \model -> do
+    LVar.set model =<< Data.diaryFrom "."
+    Data.watchAndUpdateDiary "." model
 
 render :: Ema.CLI.Action -> Diary -> Route -> LByteString
 render emaAction diary r =

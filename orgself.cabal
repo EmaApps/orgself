@@ -34,12 +34,13 @@ executable orgself
     , dependent-sum-template
     , directory
     , ema
+    , lvar
     , filepath
     , filepattern
     , fsnotify
     , megaparsec
     , neat-interpolation
-    , optparse-applicative
+    , monad-logger
     , org-mode
     , parser-combinators
     , relude

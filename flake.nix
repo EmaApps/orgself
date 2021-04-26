@@ -1,7 +1,7 @@
 {
   description = "OrgSelf";
   inputs = {
-    ema.url = "github:srid/ema/a661aa5848d7d230c4599f642454641f40872401";
+    ema.url = "github:srid/ema/48c92c3204c6ddaaf1f522e4a3d83b92ae3eb723";
     # FIXME: uncommenting this gives,
     #   error: in pure evaluation mode, 'fetchTarball' requires a 'sha256' argument
     # nixpkgs.follows = "ema";

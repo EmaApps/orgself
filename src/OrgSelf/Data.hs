@@ -20,6 +20,7 @@ import System.FSNotify
     withManager,
   )
 import System.FilePath (takeFileName, (</>))
+import Control.Monad.Logger
 import System.FilePattern.Directory (getDirectoryFiles)
 
 data Route
@@ -101,7 +102,7 @@ parseDay :: String -> Maybe Day
 parseDay =
   parseTimeM False defaultTimeLocale "%Y-%m-%d"
 
-parseDailyNote :: FilePath -> IO (Maybe (Day, OrgFile))
+parseDailyNote :: MonadIO m => FilePath -> m (Maybe (Day, OrgFile))
 parseDailyNote f =
   case parseDailyNoteFilepath f of
     Nothing -> pure Nothing
@@ -115,18 +116,18 @@ parseDailyNoteFilepath :: FilePath -> Maybe Day
 parseDailyNoteFilepath f =
   parseDay . toString =<< T.stripSuffix ".org" (toText $ takeFileName f)
 
-diaryFrom :: FilePath -> IO Diary
+diaryFrom :: (MonadIO m, MonadLogger m) => FilePath -> m Diary
 diaryFrom folder = do
-  putStrLn $ "Loading .org files from " <> folder
-  fs <- getDirectoryFiles folder (one "*.org")
+  logInfoN $ "Loading .org files from " <> toText folder
+  fs <- liftIO $ getDirectoryFiles folder (one "*.org")
   updates <- fmap (uncurry DiaryAdd) . catMaybes <$> forM fs (parseDailyNote . (folder </>))
   let diary = foldl' (flip diaryUpdate) emptyDiary updates
   pure diary
 
-watchAndUpdateDiary :: FilePath -> LVar.LVar Diary -> IO ()
+watchAndUpdateDiary :: (MonadIO m, MonadLogger m) => FilePath -> LVar.LVar Diary -> m ()
 watchAndUpdateDiary folder model = do
-  putStrLn $ "Watching .org files in " <> folder
-  withManager $ \mgr -> do
+  logInfoN $ "Watching .org files in " <> toText folder
+  liftIO $ withManager $ \mgr -> do
     stop <- watchDir mgr folder (const True) $ \event -> do
       print event
       let updateFile fp = do
