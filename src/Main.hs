@@ -32,8 +32,12 @@ main = do
     Data.watchAndUpdateDiary "." model
 
 render :: Ema.CLI.Action -> Diary -> Route -> LByteString
-render emaAction diary r =
-  Tailwind.layout emaAction (H.title $ show r <> " -- My Diary") $
+render emaAction diary r = do
+  let title = case r of
+        Index -> "My Diary"
+        OnDay d -> toText (formatDay d) <> " – My Diary"
+        Tag s -> "#" <> s <> " – My Diary"
+  Tailwind.layout emaAction (H.title $ H.text title) $
     H.div ! A.class_ "container mx-auto" $ do
       case r of
         Index -> do
@@ -65,24 +69,33 @@ render emaAction diary r =
             ! A.class_ "text-purple font-bold"
             $ "orgself"
 
+formatDay :: Day -> String
+formatDay = formatTime defaultTimeLocale "%h %d %a"
+
 renderWeekNav :: Diary -> Day -> H.Html
 renderWeekNav diary day = do
   let a = firstDayOfWeekOnAfter Monday (addDays (-6) day)
       b = firstDayOfWeekOnAfter Sunday day
+      prev = addDays (-1) a
+      next = addDays 1 b
   H.div ! A.class_ "flex justify-evenly flex-wrap border-4 border-purple-600 bg-purple-50 my-2 text-xl shadow" $ do
     let item = H.span ! A.class_ "m-2"
     item $ routeElem Index "🏠"
+    whenJust (Data.diaryLookup prev diary) $ \_ ->
+      item $ routeElem (OnDay prev) "←"
     item ! A.title "Out of 00-53 weeks in a year" $ do
       "W"
       H.toHtml $ formatTime defaultTimeLocale "%V" day
     forM_ [a .. b] $ \oDay -> item $ do
-      let s = formatTime defaultTimeLocale "%h %d %a" oDay
+      let s = formatDay oDay
       if Map.member oDay (diaryCal diary)
         then
           if oDay == day
             then H.span ! A.class_ "font-bold" $ H.toMarkup s
             else routeElem (OnDay oDay) $ H.toMarkup s
         else H.span ! A.class_ "text-gray-400" $ H.toMarkup s
+    whenJust (Data.diaryLookup next diary) $ \_ ->
+      item $ routeElem (OnDay next) "→"
 
 routeDay :: Day -> H.Html
 routeDay day =

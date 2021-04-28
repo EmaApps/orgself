@@ -54,6 +54,10 @@ data Diary = Diary
 emptyDiary :: Diary
 emptyDiary = Diary mempty mempty
 
+diaryLookup :: Day -> Diary -> Maybe (OrgFile, Measures)
+diaryLookup x =
+  Map.lookup x . diaryCal
+
 data DiaryUpdate
   = DiaryAdd Day OrgFile
   | DiaryDel Day
