@@ -67,7 +67,7 @@ render emaAction diary r =
 
 renderWeekNav :: Diary -> Day -> H.Html
 renderWeekNav diary day = do
-  let a = firstDayOfWeekOnAfter Monday (addDays (-7) day)
+  let a = firstDayOfWeekOnAfter Monday (addDays (-6) day)
       b = firstDayOfWeekOnAfter Sunday day
   H.div ! A.class_ "flex justify-evenly flex-wrap border-4 border-purple-600 bg-purple-50 my-2 text-xl shadow" $ do
     let item = H.span ! A.class_ "m-2"
