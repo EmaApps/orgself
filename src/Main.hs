@@ -69,7 +69,7 @@ renderWeekNav :: Diary -> Day -> H.Html
 renderWeekNav diary day = do
   let a = firstDayOfWeekOnAfter Monday (addDays (-7) day)
       b = firstDayOfWeekOnAfter Sunday day
-  H.div ! A.class_ "flex justify-evenly flex-wrap border-4 border-purple-600 bg-purple-50 my-2 text-2xl shadow" $ do
+  H.div ! A.class_ "flex justify-evenly flex-wrap border-4 border-purple-600 bg-purple-50 my-2 text-xl shadow" $ do
     let item = H.span ! A.class_ "m-2"
     item $ routeElem Index "🏠"
     item ! A.title "Out of 00-53 weeks in a year" $ do
@@ -128,8 +128,6 @@ renderDay (orgFile, measures) = do
 -- Even make it a separate library, as long as CSS classes can be customized!
 renderOrg :: OrgFile -> H.Html
 renderOrg _org@(Org.OrgFile _meta doc) = do
-  H.header ! A.class_ "text-2xl my-2 font-bold" $ "Doc"
-  -- renderAST "AST" org
   renderOrgDoc doc
 
 renderMeasures :: Measures -> H.Html
@@ -192,7 +190,7 @@ renderBlock blk = case blk of
 renderSection :: Org.Section -> H.Html
 renderSection (Org.Section h tags (Org.OrgDoc blocks sections)) = do
   H.li ! A.class_ "my-2" $ do
-    H.div ! A.class_ ("py-1 text-xl cursor-default " <> "hover:" <> itemHoverClass) $ do
+    H.div ! A.class_ ("py-1 cursor-default " <> "hover:" <> itemHoverClass) $ do
       renderWordsList h
       forM_ tags renderTag
       whenNotNull blocks $ \_ -> do
