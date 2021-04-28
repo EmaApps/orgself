@@ -15,11 +15,11 @@ data TaskState = TODO | DONE
   deriving (Eq, Show, Ord, Bounded, Enum)
 
 parseTask :: Org.Section -> Maybe Task
-parseTask (Org.Section heading _ _) = do
-  firstWord <- case head heading of
+parseTask Org.Section {..} = do
+  firstWord <- case head sectionHeading of
     Org.Plain s -> pure s
     _ -> Nothing
-  taskHeading <- nonEmpty $ tail heading
+  taskHeading <- nonEmpty $ tail sectionHeading
   taskState <-
     listToMaybe . catMaybes $
       [minBound .. maxBound] <&> \st -> do

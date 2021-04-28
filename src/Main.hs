@@ -210,17 +210,22 @@ renderBlock blk = case blk of
   Org.Paragraph ws -> H.p ! A.class_ "py-1" $ renderWordsList ws
 
 renderSection :: Org.Section -> H.Html
-renderSection (Org.Section h tags (Org.OrgDoc blocks sections)) = do
+renderSection Org.Section {..} = do
   H.li ! A.class_ "my-2" $ do
     H.div ! A.class_ ("py-1 cursor-default " <> "hover:" <> itemHoverClass) $ do
-      renderWordsList h
-      whenNotNull tags $ \_ ->
+      renderWordsList sectionHeading
+      whenNotNull sectionTags $ \_ ->
         H.span ! A.class_ "border-l-2 pl-1 ml-2 inline-flex space-x-2 justify-center items-center" $
-          forM_ tags renderTag
-      whenNotNull blocks $ \_ -> do
+          forM_ sectionTags renderTag
+      H.div ! A.class_ "float-right" $ do
+        -- TODO: Deadline etc
+        -- let x = sectionDeadline
+        unless (Map.null sectionProps) $ do
+          H.pre $ H.toHtml $ Shower.shower sectionProps
+      whenNotNull (Org.docBlocks sectionDoc) $ \blocks -> do
         H.div ! A.class_ "border-l-2 pl-2 text-gray-700 bg-gray-50 mt-2" $
           forM_ blocks renderBlock
-    renderOrgSections sections
+    renderOrgSections $ Org.docSections sectionDoc
 
 itemHoverClass :: H.AttributeValue
 itemHoverClass = "bg-purple-100"

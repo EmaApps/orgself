@@ -118,15 +118,16 @@
     "org-mode": {
       "flake": false,
       "locked": {
-        "lastModified": 1619361145,
-        "narHash": "sha256-aKCcAPOPSxjlJM/SgxZJ7MPjfyYJ7/qRQ7rX6AoLRrA=",
+        "lastModified": 1619634168,
+        "narHash": "sha256-wCnIIAIplO6A3Kxgm+MQt/wjzjFCoLyQoK+1Vptq//k=",
         "owner": "fosskers",
         "repo": "org-mode",
-        "rev": "d0fc0cf6b95850b02d635977b46839924d77452b",
+        "rev": "a56f901dc87ad3051bedf4bd886c110ebef97f71",
         "type": "github"
       },
       "original": {
         "owner": "fosskers",
+        "ref": "colin/deadlines-and-properties",
         "repo": "org-mode",
         "type": "github"
       }
