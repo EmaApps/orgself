@@ -118,11 +118,11 @@
     "org-mode": {
       "flake": false,
       "locked": {
-        "lastModified": 1619634168,
-        "narHash": "sha256-wCnIIAIplO6A3Kxgm+MQt/wjzjFCoLyQoK+1Vptq//k=",
+        "lastModified": 1619645822,
+        "narHash": "sha256-feJ5mBHMoHzTMBQ4TW/ie4jlmqyT6Sn8LikaTVELvqg=",
         "owner": "fosskers",
         "repo": "org-mode",
-        "rev": "a56f901dc87ad3051bedf4bd886c110ebef97f71",
+        "rev": "65894ae37c175f5e54d49f8bfcbb29cd41840872",
         "type": "github"
       },
       "original": {

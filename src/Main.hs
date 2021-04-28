@@ -211,9 +211,12 @@ renderBlock blk = case blk of
 
 renderSection :: Org.Section -> H.Html
 renderSection Org.Section {..} = do
+  let tooltip = case sectionClosed of
+        Nothing -> ""
+        Just orgTime -> "Closed on: " <> show orgTime
   H.li ! A.class_ "my-2" $ do
-    H.div ! A.class_ ("py-1 cursor-default " <> "hover:" <> itemHoverClass) $ do
-      renderWordsList sectionHeading
+    H.div ! A.title tooltip ! A.class_ ("py-1 cursor-default " <> "hover:" <> itemHoverClass) $ do
+      H.span $ renderWordsList sectionHeading
       whenNotNull sectionTags $ \_ ->
         H.span ! A.class_ "border-l-2 pl-1 ml-2 inline-flex space-x-2 justify-center items-center" $
           forM_ sectionTags renderTag
@@ -269,7 +272,6 @@ renderWords = \case
       Just clr ->
         H.span
           ! A.class_ ("border-1 p-0.5 text-white " <> clr)
-          ! A.title "Keyword"
           $ H.toMarkup s
   where
     hrefAttr url =

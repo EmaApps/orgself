@@ -30,7 +30,7 @@
             root = ./.;
             withHoogle = false;
             overrides = self: super: with pkgs.haskell.lib; {
-              ema = inputs.ema.defaultPackage.${system};
+              ema = disableCabalFlag inputs.ema.defaultPackage.${system} "with-examples";
               lvar = self.callCabal2nix "lvar" inputs.ema.inputs.lvar { }; # Until lvar gets into nixpkgs
               org-mode = dontCheck (self.callCabal2nix "org-mode" (inputs.org-mode + /org-mode) { });
             };
