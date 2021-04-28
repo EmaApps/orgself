@@ -205,7 +205,9 @@ renderSection (Org.Section h tags (Org.OrgDoc blocks sections)) = do
   H.li ! A.class_ "my-2" $ do
     H.div ! A.class_ ("py-1 cursor-default " <> "hover:" <> itemHoverClass) $ do
       renderWordsList h
-      forM_ tags renderTag
+      whenNotNull tags $ \_ ->
+        H.span ! A.class_ "border-l-2 pl-1 ml-2 inline-flex space-x-2 justify-center items-center" $
+          forM_ tags renderTag
       whenNotNull blocks $ \_ -> do
         H.div ! A.class_ "border-l-2 pl-2 text-gray-700 bg-gray-50 mt-2" $
           forM_ blocks renderBlock
@@ -217,7 +219,7 @@ itemHoverClass = "bg-purple-100"
 renderTag :: Text -> H.Html
 renderTag tag =
   H.a
-    ! A.class_ "border-1 p-0.5 bg-purple-200 font-bold rounded hover:bg-green-200"
+    ! A.class_ "bg-gray-200 font-mono text-xs rounded hover:bg-gray-100"
     ! A.title "Tag"
     ! routeHref (Tag tag)
     $ H.toMarkup tag
@@ -238,8 +240,6 @@ renderWords = \case
     H.a ! A.class_ "text-purple-700 hover:font-bold" ! A.href (hrefAttr url) $ maybe "" H.toHtml ms
   Org.Image (Org.URL url) ->
     H.img ! A.src (hrefAttr url)
-  Org.Tags tags ->
-    forM_ tags renderTag
   Org.Punct c ->
     H.toHtml c
   Org.Plain s -> do

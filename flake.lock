@@ -115,18 +115,20 @@
         "type": "github"
       }
     },
-    "nixpkgs_2": {
+    "org-mode": {
+      "flake": false,
       "locked": {
-        "lastModified": 1619457784,
-        "narHash": "sha256-l+3KnYWLh+bS1nsDDyxcBeydUS+Ih363foyV6agyAcs=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "8d9e2c31f98e99e9cfcdd3aa638c8f4e313c5ca0",
+        "lastModified": 1619361145,
+        "narHash": "sha256-aKCcAPOPSxjlJM/SgxZJ7MPjfyYJ7/qRQ7rX6AoLRrA=",
+        "owner": "fosskers",
+        "repo": "org-mode",
+        "rev": "d0fc0cf6b95850b02d635977b46839924d77452b",
         "type": "github"
       },
       "original": {
-        "id": "nixpkgs",
-        "type": "indirect"
+        "owner": "fosskers",
+        "repo": "org-mode",
+        "type": "github"
       }
     },
     "root": {
@@ -134,7 +136,11 @@
         "ema": "ema",
         "flake-compat": "flake-compat_2",
         "flake-utils": "flake-utils_2",
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": [
+          "ema",
+          "nixpkgs"
+        ],
+        "org-mode": "org-mode"
       }
     }
   },

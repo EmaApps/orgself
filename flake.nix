@@ -2,9 +2,12 @@
   description = "OrgSelf";
   inputs = {
     ema.url = "github:srid/ema";
-    # FIXME: uncommenting this gives,
-    #   error: in pure evaluation mode, 'fetchTarball' requires a 'sha256' argument
-    # nixpkgs.follows = "ema";
+    nixpkgs.follows = "ema/nixpkgs";
+
+    org-mode = {
+      url = "github:fosskers/org-mode";
+      flake = false;
+    };
 
     flake-utils.url = "github:numtide/flake-utils";
     flake-compat = {
@@ -29,7 +32,7 @@
             overrides = self: super: with pkgs.haskell.lib; {
               ema = dontHaddock (inputs.ema.defaultPackage.${system});
               lvar = self.callCabal2nix "lvar" inputs.ema.inputs.lvar { }; # Until lvar gets into nixpkgs
-              org-mode = dontCheck super.org-mode; # `tasty` dependency is broken on nixpkgs
+              org-mode = dontCheck (self.callCabal2nix "org-mode" (inputs.org-mode + /org-mode) { });
             };
             modifier = drv:
               pkgs.haskell.lib.addBuildTools drv (with pkgs.haskellPackages;

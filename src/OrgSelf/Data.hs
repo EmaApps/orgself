@@ -70,7 +70,7 @@ diaryUpdate action diary =
       diary
         { diaryCal =
             Map.insert day (orgFile, parseMeasures $ Org.orgMeta orgFile) $ diaryCal diary,
-          diaryTags = foldl' (addTag day) (diaryTags diary) (extractTags orgFile)
+          diaryTags = foldl' (addTag day) (diaryTags diary) (Org.allDocTags . Org.orgDoc $ orgFile)
         }
     DiaryDel day ->
       diary
@@ -79,7 +79,7 @@ diaryUpdate action diary =
           diaryTags =
             maybe
               (diaryTags diary)
-              (foldl' (delTag day) (diaryTags diary) . extractTags . fst)
+              (foldl' (delTag day) (diaryTags diary) . Org.allDocTags . Org.orgDoc . fst)
               (Map.lookup day $ diaryCal diary)
         }
   where
@@ -136,26 +136,3 @@ watchAndUpdateDiary folder model = do
       whenJust (parseDailyNoteFilepath fp) $ \day -> do
         putStrLn $ "Delete: " <> show day
         LVar.modify model $ diaryUpdate $ DiaryDel day
-
-extractTags :: OrgFile -> Set Text
-extractTags (Org.OrgFile _meta (Org.OrgDoc blocks sections)) =
-  foldMap fromBlocks blocks <> foldMap fromSections sections
-  where
-    fromSections :: Org.Section -> Set Text
-    fromSections (Org.Section heading tags (Org.OrgDoc bs ss)) =
-      Set.fromList tags
-        <> foldMap fromWords heading
-        <> foldMap fromBlocks bs
-        <> foldMap fromSections ss
-
-    fromBlocks :: Org.Block -> Set Text
-    fromBlocks = \case
-      Org.Paragraph ws ->
-        foldMap fromWords ws
-      _ ->
-        mempty
-
-    fromWords :: Org.Words -> Set Text
-    fromWords = \case
-      Org.Tags ts -> Set.fromList (toList ts)
-      _ -> mempty
