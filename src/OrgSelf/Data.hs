@@ -14,6 +14,8 @@ import Data.Time.Calendar
 import Ema
 import qualified Ema.Helper.FileSystem as FileSystem
 import OrgSelf.Data.Measure (Measures, parseMeasures)
+import OrgSelf.Data.Task (Task)
+import qualified OrgSelf.Data.Task as Task
 import System.FilePath (takeFileName, (</>))
 import UnliftIO (MonadUnliftIO)
 
@@ -47,16 +49,21 @@ instance Ema Diary Route where
 
 data Diary = Diary
   { diaryCal :: Map Day (OrgFile, Measures),
+    diaryTasks :: Map Day [Task],
     diaryTags :: Map Text (Set Day)
   }
   deriving (Eq)
 
 emptyDiary :: Diary
-emptyDiary = Diary mempty mempty
+emptyDiary = Diary mempty mempty mempty
 
 diaryLookup :: Day -> Diary -> Maybe (OrgFile, Measures)
 diaryLookup x =
   Map.lookup x . diaryCal
+
+diaryLookupTasks :: Day -> Diary -> [Task]
+diaryLookupTasks x =
+  fromMaybe mempty . Map.lookup x . diaryTasks
 
 data DiaryUpdate
   = DiaryAdd Day OrgFile
@@ -70,12 +77,17 @@ diaryUpdate action diary =
       diary
         { diaryCal =
             Map.insert day (orgFile, parseMeasures $ Org.orgMeta orgFile) $ diaryCal diary,
-          diaryTags = foldl' (addTag day) (diaryTags diary) (Org.allDocTags . Org.orgDoc $ orgFile)
+          diaryTasks =
+            Map.insert day (Task.queryTasks orgFile) $ diaryTasks diary,
+          diaryTags =
+            foldl' (addTag day) (diaryTags diary) (Org.allDocTags . Org.orgDoc $ orgFile)
         }
     DiaryDel day ->
       diary
         { diaryCal =
             Map.delete day $ diaryCal diary,
+          diaryTasks =
+            Map.delete day $ diaryTasks diary,
           diaryTags =
             maybe
               (diaryTags diary)

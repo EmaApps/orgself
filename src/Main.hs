@@ -19,6 +19,7 @@ import qualified Ema.Helper.Tailwind as Tailwind
 import OrgSelf.Data (Diary (diaryTags), Route (..), diaryCal)
 import qualified OrgSelf.Data as Data
 import OrgSelf.Data.Measure
+import qualified OrgSelf.Data.Task as Task
 import qualified OrgSelf.Widget.Icons as Icons
 import qualified Shower
 import Text.Blaze.Html5 ((!))
@@ -86,14 +87,22 @@ renderWeekNav diary day = do
     item ! A.title "Out of 00-53 weeks in a year" $ do
       "W"
       H.toHtml $ formatTime defaultTimeLocale "%V" day
-    forM_ [a .. b] $ \oDay -> item $ do
-      let s = formatDay oDay
-      if Map.member oDay (diaryCal diary)
-        then
-          if oDay == day
-            then H.span ! A.class_ "font-bold" $ H.toMarkup s
-            else routeElem (OnDay oDay) $ H.toMarkup s
-        else H.span ! A.class_ "text-gray-400" $ H.toMarkup s
+    forM_ [a .. b] $ \oDay ->
+      item $ do
+        let s = formatDay oDay
+        if Map.member oDay (diaryCal diary)
+          then
+            if oDay == day
+              then H.span ! A.class_ "font-bold" $ H.toMarkup s
+              else routeElem (OnDay oDay) $ H.toMarkup s
+          else H.span ! A.class_ "text-gray-400" $ H.toMarkup s
+        whenNotNull (Data.diaryLookupTasks oDay diary) $ \(toList -> tasks) -> do
+          let todos = filter ((== Task.TODO) . Task.taskState) tasks
+          unless (null todos) $ do
+            H.sup
+              ! A.class_ "font-bold text-red-500"
+              ! A.title (show (length todos) <> " TODOs on this day")
+              $ H.text (show $ length todos)
     whenJust (Data.diaryLookup next diary) $ \_ ->
       item $ routeElem (OnDay next) "→"
 
@@ -244,6 +253,7 @@ renderWords = \case
     H.toHtml c
   Org.Plain s -> do
     -- `org-mode` library doedn't parse these; until then, we handle them here.
+    -- TODO: Use OrgSelf.Data.Task
     let specialWordColors =
           Map.fromList
             [ ("TODO", "bg-red-600"),
