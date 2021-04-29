@@ -5,7 +5,7 @@
     nixpkgs.follows = "ema/nixpkgs";
 
     org-mode = {
-      url = "github:fosskers/org-mode/colin/deadlines-and-properties";
+      url = "github:fosskers/org-mode/master";
       flake = false;
     };
 
