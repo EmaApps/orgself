@@ -198,7 +198,9 @@ renderBlock :: Org.Block -> H.Html
 renderBlock blk = case blk of
   Org.Quote s -> H.blockquote (H.toHtml s)
   Org.Example _s -> renderAST "TODO: Example" blk
-  Org.Code _mlang _s -> renderAST "TODO: Code" blk
+  Org.Code mlang s -> do
+    H.div $ H.em $ show mlang
+    H.code $ H.pre ! A.class_ (show mlang <> " bg-black text-gray-100 w-full border-l-2 pl-2") $ H.text s
   Org.List (Org.ListItems items) ->
     H.ul ! A.class_ "list-disc ml-4" $
       forM_ items $ \(Org.Item ws msub) ->
