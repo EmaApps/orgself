@@ -97,7 +97,7 @@ renderWeekNav diary day = do
               else routeElem (OnDay oDay) $ H.toMarkup s
           else H.span ! A.class_ "text-gray-400" $ H.toMarkup s
         whenNotNull (Data.diaryLookupTasks oDay diary) $ \(toList -> tasks) -> do
-          let todos = filter ((== Task.TODO) . Task.taskState) tasks
+          let todos = filter ((== Org.TODO) . Task.taskState) tasks
           unless (null todos) $ do
             H.sup
               ! A.class_ "font-bold text-red-500"
@@ -218,6 +218,8 @@ renderSection Org.Section {..} = do
         Just orgTime -> "Closed on: " <> show orgTime
   H.li ! A.class_ "my-2" $ do
     H.div ! A.title tooltip ! A.class_ ("py-1 cursor-default " <> "hover:" <> itemHoverClass) $ do
+      whenJust sectionTodo $ \todoState ->
+        renderTodoState todoState
       H.span $ renderWordsList sectionHeading
       whenNotNull sectionTags $ \_ ->
         H.span ! A.class_ "border-l-2 pl-1 ml-2 inline-flex space-x-2 justify-center items-center" $
@@ -261,20 +263,8 @@ renderWords = \case
     H.img ! A.src (hrefAttr url)
   Org.Punct c ->
     H.toHtml c
-  Org.Plain s -> do
-    -- `org-mode` library doedn't parse these; until then, we handle them here.
-    -- TODO: Use OrgSelf.Data.Task
-    let specialWordColors =
-          Map.fromList
-            [ ("TODO", "bg-red-600"),
-              ("DONE", "bg-green-600")
-            ]
-    case Map.lookup s specialWordColors of
-      Nothing -> H.toMarkup s
-      Just clr ->
-        H.span
-          ! A.class_ ("border-1 p-0.5 text-white " <> clr)
-          $ H.toMarkup s
+  Org.Plain s ->
+    H.text s
   where
     hrefAttr url =
       fromString . toString $ url
@@ -284,3 +274,18 @@ renderAST name x = do
   H.div ! A.class_ "border-2 p-2 rounded text-xs" $ do
     H.header ! A.class_ "font-bold" $ H.toMarkup name
     H.pre ! A.class_ "" $ H.toMarkup $ Shower.shower x
+
+renderTodoState :: Org.Todo -> H.Markup
+renderTodoState todoState = do
+  let specialWordColors =
+        Map.fromList
+          [ (Org.TODO, "bg-red-600"),
+            (Org.DONE, "bg-green-600")
+          ]
+  H.span ! A.class_ "mr-1" $ do
+    case Map.lookup todoState specialWordColors of
+      Nothing -> H.toMarkup $ H.text $ show todoState
+      Just clr ->
+        H.span
+          ! A.class_ ("border-1 p-0.5 text-white " <> clr)
+          $ H.toMarkup $ H.text $ show todoState
