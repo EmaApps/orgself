@@ -245,7 +245,15 @@ renderTag tag =
 
 renderWordsList :: Foldable f => f Org.Words -> H.Markup
 renderWordsList =
-  mapM_ $ \s -> renderWords s >> " "
+  mapM_ $ \s -> do
+    renderWords s
+    case s of
+      -- HACK: Not sure why org-mode parser is parsing punctuations. They seem
+      -- useless. We don't want to separate punctuatoins by whitespace,
+      -- especially whey they are not in the source document. This hack achives
+      -- that.
+      Org.Punct _ -> pure ()
+      _ -> " "
 
 renderWords :: Org.Words -> H.Markup
 renderWords = \case
