@@ -13,7 +13,8 @@ import qualified Data.Org as Org
 import qualified Data.Set as Set
 import Data.Time
 import Data.Time.Extra
-import Ema
+import Ema (Ema)
+import qualified Ema
 import qualified Ema.CLI
 import qualified Ema.Helper.Tailwind as Tailwind
 import OrgSelf.Data (Diary (diaryTags), Route (..), diaryCal)
@@ -28,7 +29,7 @@ import qualified Text.Blaze.Html5.Attributes as A
 
 main :: IO ()
 main = do
-  runEma render $ \model -> do
+  Ema.runEma render $ \model -> do
     LVar.set model =<< Data.diaryFrom "."
     Data.watchAndUpdateDiary "." model
 
@@ -139,7 +140,7 @@ renderDiaryListing cal = do
 
 routeHref :: Ema a r => r -> H.Attribute
 routeHref r' =
-  A.href (fromString . toString $ routeUrl r')
+  A.href (fromString . toString $ Ema.routeUrl r')
 
 renderDay :: (OrgFile, Measures) -> H.Html
 renderDay (orgFile, measures) = do
@@ -217,7 +218,7 @@ renderSection Org.Section {..} = do
         Nothing -> ""
         Just orgTime -> "Closed on: " <> show orgTime
   H.li ! A.class_ "my-2" $ do
-    H.div ! A.title tooltip ! A.class_ ("py-1 cursor-default " <> "hover:" <> itemHoverClass) $ do
+    H.div ! A.title tooltip ! A.class_ "py-1 cursor-default hover:bg-purple-100" $ do
       whenJust sectionTodo $ \todoState ->
         renderTodoState todoState
       H.span $ renderWordsList sectionHeading
@@ -233,9 +234,6 @@ renderSection Org.Section {..} = do
         H.div ! A.class_ "border-l-2 pl-2 text-gray-700 bg-gray-50 mt-2" $
           forM_ blocks renderBlock
     renderOrgSections $ Org.docSections sectionDoc
-
-itemHoverClass :: H.AttributeValue
-itemHoverClass = "bg-purple-100"
 
 renderTag :: Text -> H.Html
 renderTag tag =
