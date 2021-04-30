@@ -7,6 +7,7 @@ Create beautiful journal websites with self-tracking. Using org-mode. Based on [
 ## Running
 
 ```bash
+ln -s $(pwd)/example ~/org 
 bin/run
 ```
 
@@ -15,10 +16,6 @@ Or <kbd>Ctrl+Shift+B</kbd> in VSCode.
 ## Upgrading ema
 
 Open `flake.nix` and change `ema.url` to point to a new revision.
-
-## Generating static site
-
-TODO
 
 ## Credits
 
