@@ -29,6 +29,7 @@ executable orgself
     , blaze-markup
     , constraints-extras
     , containers
+    , data-default
     , dependent-map
     , dependent-sum
     , dependent-sum-template

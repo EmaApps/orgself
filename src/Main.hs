@@ -4,10 +4,8 @@
 
 module Main where
 
-import Control.Monad.Logger
 import qualified Data.Dependent.Map as DMap
 import Data.Dependent.Sum (DSum (..))
-import qualified Data.LVar as LVar
 import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
 import qualified Data.Org as Org
@@ -33,23 +31,12 @@ import qualified Text.Blaze.Html5.Attributes as A
 main :: IO ()
 main = do
   Ema.runEma render $ \model -> do
-    LVar.set model =<< do
-      logInfoN "Loading .org files from ./."
-      fs <- FileSystem.filesMatching "." ["*.org"]
-      updates <- fmap (uncurry Data.DiaryAdd) . catMaybes <$> forM fs Data.parseDailyNote
-      pure $ foldl' (flip Data.diaryUpdate) Data.emptyDiary updates
-    logInfoN "Watching .org files in ./."
-    FileSystem.onChange "." $ \fp -> \case
-      FileSystem.Update ->
-        Data.parseDailyNote fp >>= \case
-          Nothing -> pure ()
-          Just (day, org) -> do
-            putStrLn $ "Update: " <> show day
-            LVar.modify model $ Data.diaryUpdate $ Data.DiaryAdd day org
+    FileSystem.mountFileSystemOnLVar "." ["*.org"] model $ \fp -> \case
+      FileSystem.Update -> do
+        mOrgs <- Data.parseDailyNote fp
+        pure $ maybe id (Data.diaryUpdate . uncurry Data.DiaryAdd) mOrgs
       FileSystem.Delete ->
-        whenJust (Data.parseDailyNoteFilepath fp) $ \day -> do
-          putStrLn $ "Delete: " <> show day
-          LVar.modify model $ Data.diaryUpdate $ Data.DiaryDel day
+        pure $ maybe id (Data.diaryUpdate . Data.DiaryDel) $ Data.parseDailyNoteFilepath fp
 
 render :: Ema.CLI.Action -> Diary -> Route -> LByteString
 render emaAction diary r = do

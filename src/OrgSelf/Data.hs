@@ -4,6 +4,7 @@
 module OrgSelf.Data where
 
 import Control.Exception (throwIO)
+import Data.Default
 import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
 import qualified Data.Org as Org
@@ -24,8 +25,8 @@ data Diary = Diary
   }
   deriving (Eq)
 
-emptyDiary :: Diary
-emptyDiary = Diary mempty mempty mempty
+instance Default Diary where
+  def = Diary mempty mempty mempty
 
 diaryLookup :: Day -> Diary -> Maybe (OrgFile, Measures)
 diaryLookup x =
@@ -38,7 +39,7 @@ diaryLookupTasks x =
 data DiaryUpdate
   = DiaryAdd Day OrgFile
   | DiaryDel Day
-  deriving (Eq)
+  deriving (Eq, Show)
 
 diaryUpdate :: DiaryUpdate -> Diary -> Diary
 diaryUpdate action diary =
