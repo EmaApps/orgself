@@ -3,52 +3,19 @@
 
 module OrgSelf.Data where
 
-import Control.Exception (throw, throwIO)
-import Control.Monad.Logger
-import qualified Data.LVar as LVar
+import Control.Exception (throwIO)
 import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
 import qualified Data.Org as Org
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Time (defaultTimeLocale, parseTimeM)
-import Data.Time.Calendar
-import Ema
-import qualified Ema.Helper.FileSystem as FileSystem
+import Data.Time.Calendar (Day)
 import OrgSelf.Data.Measure (Measures, parseMeasures)
 import OrgSelf.Data.Task (Task)
 import qualified OrgSelf.Data.Task as Task
-import System.FilePath (takeFileName, (</>))
+import System.FilePath (takeFileName)
 import qualified Text.Megaparsec as M
-import UnliftIO (MonadUnliftIO)
-
-data Route
-  = Index
-  | OnDay Day
-  | Tag Text
-  deriving (Show)
-
-instance Ema Diary Route where
-  encodeRoute = \case
-    Index -> mempty
-    OnDay day ->
-      let (y, m, d) = toGregorian day
-       in [show y, show m, show d]
-    Tag tag ->
-      ["tag", fromString . toString $ tag]
-  decodeRoute = \case
-    [] -> Just Index
-    ["tag", tag] ->
-      Just $ Tag $ unSlug tag
-    [y, m, d] ->
-      OnDay <$> do
-        y' <- readMaybe @Integer (toString $ unSlug y)
-        m' <- readMaybe @Int (toString $ unSlug m)
-        d' <- readMaybe @Int (toString $ unSlug d)
-        fromGregorianValid y' m' d'
-    _ -> Nothing
-  staticRoutes diary =
-    Index : fmap OnDay (Map.keys $ diaryCal diary)
 
 data Diary = Diary
   { diaryCal :: Map Day (OrgFile, Measures),
@@ -128,29 +95,6 @@ parseDailyNote f =
 parseDailyNoteFilepath :: FilePath -> Maybe Day
 parseDailyNoteFilepath f =
   parseDay . toString =<< T.stripSuffix ".org" (toText $ takeFileName f)
-
-diaryFrom :: (MonadIO m, MonadLogger m) => FilePath -> m Diary
-diaryFrom folder = do
-  logInfoN $ "Loading .org files from " <> toText folder
-  fs <- FileSystem.filesMatching folder ["*.org"]
-  updates <- fmap (uncurry DiaryAdd) . catMaybes <$> forM fs (parseDailyNote . (folder </>))
-  let diary = foldl' (flip diaryUpdate) emptyDiary updates
-  pure diary
-
-watchAndUpdateDiary :: (MonadIO m, MonadLogger m, MonadUnliftIO m) => FilePath -> LVar.LVar Diary -> m ()
-watchAndUpdateDiary folder model = do
-  logInfoN $ "Watching .org files in " <> toText folder
-  FileSystem.onChange folder $ \fp -> \case
-    FileSystem.Update ->
-      parseDailyNote fp >>= \case
-        Nothing -> pure ()
-        Just (day, org) -> do
-          putStrLn $ "Update: " <> show day
-          LVar.modify model $ diaryUpdate $ DiaryAdd day org
-    FileSystem.Delete ->
-      whenJust (parseDailyNoteFilepath fp) $ \day -> do
-        putStrLn $ "Delete: " <> show day
-        LVar.modify model $ diaryUpdate $ DiaryDel day
 
 -- FIXME: Not using this until https://github.com/srid/ema/issues/21
 parseMust :: M.Parsec Void Text a -> FilePath -> Text -> IO a

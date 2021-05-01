@@ -78,6 +78,7 @@ executable orgself
     OrgSelf.Data
     OrgSelf.Data.Measure
     OrgSelf.Data.Task
+    OrgSelf.Route
     OrgSelf.Widget.Icons
 
   default-language:   Haskell2010

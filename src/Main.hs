@@ -4,6 +4,7 @@
 
 module Main where
 
+import Control.Monad.Logger
 import qualified Data.Dependent.Map as DMap
 import Data.Dependent.Sum (DSum (..))
 import qualified Data.LVar as LVar
@@ -16,11 +17,13 @@ import Data.Time.Extra
 import Ema (Ema)
 import qualified Ema
 import qualified Ema.CLI
+import qualified Ema.Helper.FileSystem as FileSystem
 import qualified Ema.Helper.Tailwind as Tailwind
-import OrgSelf.Data (Diary (diaryTags), Route (..), diaryCal)
+import OrgSelf.Data (Diary)
 import qualified OrgSelf.Data as Data
 import OrgSelf.Data.Measure
 import qualified OrgSelf.Data.Task as Task
+import OrgSelf.Route
 import qualified OrgSelf.Widget.Icons as Icons
 import qualified Shower
 import Text.Blaze.Html5 ((!))
@@ -30,8 +33,23 @@ import qualified Text.Blaze.Html5.Attributes as A
 main :: IO ()
 main = do
   Ema.runEma render $ \model -> do
-    LVar.set model =<< Data.diaryFrom "."
-    Data.watchAndUpdateDiary "." model
+    LVar.set model =<< do
+      logInfoN "Loading .org files from ./."
+      fs <- FileSystem.filesMatching "." ["*.org"]
+      updates <- fmap (uncurry Data.DiaryAdd) . catMaybes <$> forM fs Data.parseDailyNote
+      pure $ foldl' (flip Data.diaryUpdate) Data.emptyDiary updates
+    logInfoN "Watching .org files in ./."
+    FileSystem.onChange "." $ \fp -> \case
+      FileSystem.Update ->
+        Data.parseDailyNote fp >>= \case
+          Nothing -> pure ()
+          Just (day, org) -> do
+            putStrLn $ "Update: " <> show day
+            LVar.modify model $ Data.diaryUpdate $ Data.DiaryAdd day org
+      FileSystem.Delete ->
+        whenJust (Data.parseDailyNoteFilepath fp) $ \day -> do
+          putStrLn $ "Delete: " <> show day
+          LVar.modify model $ Data.diaryUpdate $ Data.DiaryDel day
 
 render :: Ema.CLI.Action -> Diary -> Route -> LByteString
 render emaAction diary r = do
@@ -44,22 +62,22 @@ render emaAction diary r = do
       case r of
         Index -> do
           heading "My Diary"
-          renderDiaryListing (diaryCal diary)
+          renderDiaryListing (Data.diaryCal diary)
           H.header "Tags"
-          forM_ (Map.toList $ diaryTags diary) $ \(tag, length -> n) ->
+          forM_ (Map.toList $ Data.diaryTags diary) $ \(tag, length -> n) ->
             H.li $ do
               renderTag tag
               " (" <> show n <> ")"
         OnDay day -> do
           renderWeekNav diary day
-          maybe "not found" renderDay (Map.lookup day $ diaryCal diary)
+          maybe "not found" renderDay (Map.lookup day $ Data.diaryCal diary)
         Tag tag -> do
           heading $ H.toHtml $ "Days tagged with #" <> tag
           routeElem Index "Back to Index"
-          case Map.lookup tag (diaryTags diary) of
+          case Map.lookup tag (Data.diaryTags diary) of
             Nothing -> "Tag not found"
             Just days -> do
-              let tagCal = Map.filterWithKey (\day _ -> Set.member day days) (diaryCal diary)
+              let tagCal = Map.filterWithKey (\day _ -> Set.member day days) (Data.diaryCal diary)
               renderDiaryListing tagCal
       H.footer
         ! A.class_ "text-xs my-4 py-2 text-center bg-gray-200"
@@ -91,7 +109,7 @@ renderWeekNav diary day = do
     forM_ [a .. b] $ \oDay ->
       item $ do
         let s = formatDay oDay
-        if Map.member oDay (diaryCal diary)
+        if Map.member oDay (Data.diaryCal diary)
           then
             if oDay == day
               then H.span ! A.class_ "font-bold" $ H.toMarkup s
