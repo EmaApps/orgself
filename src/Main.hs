@@ -249,8 +249,8 @@ renderWordsList =
     renderWords s
     case s of
       -- HACK: Not sure why org-mode parser is parsing punctuations. They seem
-      -- useless. We don't want to separate punctuatoins by whitespace,
-      -- especially whey they are not in the source document. This hack achives
+      -- useless. We don't want to separate punctuations by whitespace,
+      -- especially when it is not in the source document. This hack achieves
       -- that.
       Org.Punct _ -> pure ()
       _ -> " "
