@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -9,6 +10,7 @@ import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
 import qualified Data.Org as Org
 import qualified Data.Set as Set
+import Data.Tagged
 import qualified Data.Text as T
 import Data.Time (defaultTimeLocale, parseTimeM)
 import Data.Time.Calendar (Day)
@@ -18,10 +20,12 @@ import qualified OrgSelf.Data.Task as Task
 import System.FilePath (takeFileName)
 import qualified Text.Megaparsec as M
 
+type Tag = Tagged "Tag" Text
+
 data Diary = Diary
   { diaryCal :: Map Day (OrgFile, Measures),
     diaryTasks :: Map Day [Task],
-    diaryTags :: Map Text (Set Day)
+    diaryTags :: Map Tag (Set Day)
   }
   deriving (Eq)
 
@@ -37,14 +41,14 @@ diaryLookupTasks x =
   fromMaybe mempty . Map.lookup x . diaryTasks
 
 data DiaryUpdate
-  = DiaryAdd Day OrgFile
+  = DiaryModify Day OrgFile
   | DiaryDel Day
   deriving (Eq, Show)
 
 diaryUpdate :: DiaryUpdate -> Diary -> Diary
 diaryUpdate action diary =
   case action of
-    DiaryAdd day orgFile ->
+    DiaryModify day orgFile ->
       diary
         { diaryCal =
             Map.insert
@@ -57,10 +61,11 @@ diaryUpdate action diary =
               (Task.queryTasks orgFile)
               $ diaryTasks diary,
           diaryTags =
+            -- TODO: This should *remove* tags if they get removed from the .org file
             foldl'
               (addTag day)
               (diaryTags diary)
-              (Org.allDocTags . Org.orgDoc $ orgFile)
+              (Set.map Tagged . Org.allDocTags . Org.orgDoc $ orgFile)
         }
     DiaryDel day ->
       diary
@@ -74,6 +79,7 @@ diaryUpdate action diary =
               ( foldl'
                   (delTag day)
                   (diaryTags diary)
+                  . Set.map Tagged
                   . Org.allDocTags
                   . Org.orgDoc
                   . fst
@@ -81,11 +87,11 @@ diaryUpdate action diary =
               (Map.lookup day $ diaryCal diary)
         }
   where
-    addTag :: Day -> Map Text (Set Day) -> Text -> Map Text (Set Day)
+    addTag :: Day -> Map Tag (Set Day) -> Tag -> Map Tag (Set Day)
     addTag v m k =
       let vs = fromMaybe mempty $ Map.lookup k m
        in Map.insert k (Set.insert v vs) m
-    delTag :: Day -> Map Text (Set Day) -> Text -> Map Text (Set Day)
+    delTag :: Day -> Map Tag (Set Day) -> Tag -> Map Tag (Set Day)
     delTag v m k =
       case Map.lookup k m of
         Nothing -> m

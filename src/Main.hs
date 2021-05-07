@@ -10,6 +10,7 @@ import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
 import qualified Data.Org as Org
 import qualified Data.Set as Set
+import Data.Tagged (Tagged (Tagged), untag)
 import Data.Time
 import Data.Time.Extra
 import Ema (Ema)
@@ -34,7 +35,7 @@ main = do
     FileSystem.mountFileSystemOnLVar "." ["*.org"] model $ \fp -> \case
       FileSystem.Update -> do
         mOrgs <- Data.parseDailyNote fp
-        pure $ maybe id (Data.diaryUpdate . uncurry Data.DiaryAdd) mOrgs
+        pure $ maybe id (Data.diaryUpdate . uncurry Data.DiaryModify) mOrgs
       FileSystem.Delete ->
         pure $ maybe id (Data.diaryUpdate . Data.DiaryDel) $ Data.parseDailyNoteFilepath fp
 
@@ -43,7 +44,7 @@ render emaAction diary r = do
   let title = case r of
         Index -> "My Diary"
         OnDay d -> toText (formatDay d) <> " – My Diary"
-        Tag s -> "#" <> s <> " – My Diary"
+        Tag s -> "#" <> untag s <> " – My Diary"
   Tailwind.layout emaAction (H.title $ H.text title) $
     H.div ! A.class_ "container mx-auto" $ do
       case r of
@@ -59,7 +60,7 @@ render emaAction diary r = do
           renderWeekNav diary day
           maybe "not found" renderDay (Map.lookup day $ Data.diaryCal diary)
         Tag tag -> do
-          heading $ H.toHtml $ "Days tagged with #" <> tag
+          heading $ H.toHtml $ "Days tagged with #" <> untag tag
           routeElem Index "Back to Index"
           case Map.lookup tag (Data.diaryTags diary) of
             Nothing -> "Tag not found"
@@ -229,7 +230,7 @@ renderSection Org.Section {..} = do
       H.span $ renderWordsList sectionHeading
       whenNotNull sectionTags $ \_ ->
         H.span ! A.class_ "border-l-2 pl-1 ml-2 inline-flex space-x-2 justify-center items-center" $
-          forM_ sectionTags renderTag
+          forM_ sectionTags $ renderTag . Tagged
       H.div ! A.class_ "float-right" $ do
         -- TODO: Deadline etc
         -- let x = sectionDeadline
@@ -240,13 +241,13 @@ renderSection Org.Section {..} = do
           forM_ blocks renderBlock
     renderOrgSections $ Org.docSections sectionDoc
 
-renderTag :: Text -> H.Html
+renderTag :: Data.Tag -> H.Html
 renderTag tag =
   H.a
     ! A.class_ "bg-gray-200 font-mono text-xs rounded hover:bg-gray-100"
     ! A.title "Tag"
     ! routeHref (Tag tag)
-    $ H.toMarkup tag
+    $ H.toMarkup (untag tag)
 
 renderWordsList :: Foldable f => f Org.Words -> H.Markup
 renderWordsList =
