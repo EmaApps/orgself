@@ -21,6 +21,7 @@ import qualified Ema.Helper.Tailwind as Tailwind
 import OrgSelf.Data (Diary)
 import qualified OrgSelf.Data as Data
 import OrgSelf.Data.Measure
+import qualified OrgSelf.Data.Tag as Data
 import qualified OrgSelf.Data.Task as Task
 import OrgSelf.Route
 import qualified OrgSelf.Widget.Icons as Icons

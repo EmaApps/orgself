@@ -61,11 +61,10 @@ diaryUpdate action diary =
               (Task.queryTasks orgFile)
               $ diaryTasks diary,
           diaryTags =
-            -- TODO: This should *remove* tags if they get removed from the .org file
-            foldl'
-              (flip (TagStore.addTagForDay day))
-              (diaryTags diary)
-              (Set.map Tagged . Org.allDocTags . Org.orgDoc $ orgFile)
+            let tags :: Set TagStore.Tag = (Set.map Tagged . Org.allDocTags . Org.orgDoc $ orgFile)
+             in diaryTags diary
+                  & TagStore.delTagsForDay day
+                  & TagStore.addTagsForDay day tags
         }
     DiaryDel day ->
       diary

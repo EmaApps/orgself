@@ -9,11 +9,12 @@ import Ema (Ema (..))
 import qualified Ema
 import OrgSelf.Data (Diary)
 import qualified OrgSelf.Data as Data
+import qualified OrgSelf.Data.Tag as Tag
 
 data Route
   = Index
   | OnDay Day
-  | Tag Data.Tag
+  | Tag Tag.Tag
   deriving (Show)
 
 instance Ema Diary Route where

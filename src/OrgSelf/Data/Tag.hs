@@ -12,10 +12,18 @@ type Tag = Tagged "Tag" Text
 
 type TagStore = Map Tag (Set Day)
 
-addTagForDay :: Day -> Tag -> TagStore -> TagStore
-addTagForDay v k m =
-  let vs = fromMaybe mempty $ Map.lookup k m
-   in Map.insert k (Set.insert v vs) m
+addTagsForDay :: Day -> Set Tag -> TagStore -> TagStore
+addTagsForDay day =
+  flip $ foldl' (flip (addTagForDay day))
+  where
+    addTagForDay :: Day -> Tag -> TagStore -> TagStore
+    addTagForDay v k m =
+      let vs = fromMaybe mempty $ Map.lookup k m
+       in Map.insert k (Set.insert v vs) m
+
+delTagsForDay :: Day -> TagStore -> TagStore
+delTagsForDay day =
+  Map.map $ Set.delete day
 
 delTagFromDay :: Day -> Tag -> TagStore -> TagStore
 delTagFromDay v k m =
