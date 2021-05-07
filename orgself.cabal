@@ -78,6 +78,7 @@ executable orgself
     Data.Time.Extra
     OrgSelf.Data
     OrgSelf.Data.Measure
+    OrgSelf.Data.Tag
     OrgSelf.Data.Task
     OrgSelf.Route
     OrgSelf.Widget.Icons

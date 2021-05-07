@@ -5,27 +5,27 @@
 module OrgSelf.Data where
 
 import Control.Exception (throwIO)
-import Data.Default
+import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
 import qualified Data.Org as Org
 import qualified Data.Set as Set
-import Data.Tagged
+import Data.Tagged (Tagged (Tagged))
 import qualified Data.Text as T
 import Data.Time (defaultTimeLocale, parseTimeM)
 import Data.Time.Calendar (Day)
 import OrgSelf.Data.Measure (Measures, parseMeasures)
+import OrgSelf.Data.Tag (TagStore)
+import qualified OrgSelf.Data.Tag as TagStore
 import OrgSelf.Data.Task (Task)
 import qualified OrgSelf.Data.Task as Task
 import System.FilePath (takeFileName)
 import qualified Text.Megaparsec as M
 
-type Tag = Tagged "Tag" Text
-
 data Diary = Diary
   { diaryCal :: Map Day (OrgFile, Measures),
     diaryTasks :: Map Day [Task],
-    diaryTags :: Map Tag (Set Day)
+    diaryTags :: TagStore
   }
   deriving (Eq)
 
@@ -63,7 +63,7 @@ diaryUpdate action diary =
           diaryTags =
             -- TODO: This should *remove* tags if they get removed from the .org file
             foldl'
-              (addTag day)
+              (flip (TagStore.addTagForDay day))
               (diaryTags diary)
               (Set.map Tagged . Org.allDocTags . Org.orgDoc $ orgFile)
         }
@@ -77,7 +77,7 @@ diaryUpdate action diary =
             maybe
               (diaryTags diary)
               ( foldl'
-                  (delTag day)
+                  (flip (TagStore.delTagFromDay day))
                   (diaryTags diary)
                   . Set.map Tagged
                   . Org.allDocTags
@@ -86,19 +86,6 @@ diaryUpdate action diary =
               )
               (Map.lookup day $ diaryCal diary)
         }
-  where
-    addTag :: Day -> Map Tag (Set Day) -> Tag -> Map Tag (Set Day)
-    addTag v m k =
-      let vs = fromMaybe mempty $ Map.lookup k m
-       in Map.insert k (Set.insert v vs) m
-    delTag :: Day -> Map Tag (Set Day) -> Tag -> Map Tag (Set Day)
-    delTag v m k =
-      case Map.lookup k m of
-        Nothing -> m
-        Just vs ->
-          if Set.member v vs
-            then Map.insert k (Set.delete v vs) m
-            else m
 
 parseDay :: String -> Maybe Day
 parseDay =
