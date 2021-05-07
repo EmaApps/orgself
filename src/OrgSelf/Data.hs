@@ -9,14 +9,12 @@ import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Org (OrgFile)
 import qualified Data.Org as Org
-import qualified Data.Set as Set
-import Data.Tagged (Tagged (Tagged))
 import qualified Data.Text as T
 import Data.Time (defaultTimeLocale, parseTimeM)
 import Data.Time.Calendar (Day)
 import OrgSelf.Data.Measure (Measures, parseMeasures)
 import OrgSelf.Data.Tag (TagStore)
-import qualified OrgSelf.Data.Tag as TagStore
+import qualified OrgSelf.Data.Tag as Tag
 import OrgSelf.Data.Task (Task)
 import qualified OrgSelf.Data.Task as Task
 import System.FilePath (takeFileName)
@@ -45,45 +43,38 @@ data DiaryUpdate
   | DiaryDel Day
   deriving (Eq, Show)
 
+-- TODO: Use lens to make this nicer.
 diaryUpdate :: DiaryUpdate -> Diary -> Diary
 diaryUpdate action diary =
   case action of
     DiaryModify day orgFile ->
       diary
         { diaryCal =
-            Map.insert
-              day
-              (orgFile, parseMeasures $ Org.orgMeta orgFile)
-              $ diaryCal diary,
+            diaryCal diary
+              & Map.insert
+                day
+                (orgFile, parseMeasures $ Org.orgMeta orgFile),
           diaryTasks =
-            Map.insert
-              day
-              (Task.queryTasks orgFile)
-              $ diaryTasks diary,
+            diaryTasks diary
+              & Map.insert
+                day
+                (Task.queryTasks orgFile),
           diaryTags =
-            let tags :: Set TagStore.Tag = (Set.map Tagged . Org.allDocTags . Org.orgDoc $ orgFile)
-             in diaryTags diary
-                  & TagStore.delTagsForDay day
-                  & TagStore.addTagsForDay day tags
+            diaryTags diary
+              & Tag.delTagsForDay day
+              & Tag.addTagsForDay day (Tag.tagsFrom orgFile)
         }
     DiaryDel day ->
       diary
         { diaryCal =
-            Map.delete day $ diaryCal diary,
+            diaryCal diary
+              & Map.delete day,
           diaryTasks =
-            Map.delete day $ diaryTasks diary,
+            diaryTasks diary
+              & Map.delete day,
           diaryTags =
-            maybe
-              (diaryTags diary)
-              ( foldl'
-                  (flip (TagStore.delTagFromDay day))
-                  (diaryTags diary)
-                  . Set.map Tagged
-                  . Org.allDocTags
-                  . Org.orgDoc
-                  . fst
-              )
-              (Map.lookup day $ diaryCal diary)
+            diaryTags diary
+              & Tag.delTagsForDay day
         }
 
 parseDay :: String -> Maybe Day

@@ -4,6 +4,7 @@
 module OrgSelf.Data.Tag where
 
 import qualified Data.Map.Strict as Map
+import qualified Data.Org as Org
 import qualified Data.Set as Set
 import Data.Tagged
 import Data.Time.Calendar (Day)
@@ -11,6 +12,10 @@ import Data.Time.Calendar (Day)
 type Tag = Tagged "Tag" Text
 
 type TagStore = Map Tag (Set Day)
+
+tagsFrom :: Org.OrgFile -> Set Tag
+tagsFrom =
+  Set.map Tagged . Org.allDocTags . Org.orgDoc
 
 addTagsForDay :: Day -> Set Tag -> TagStore -> TagStore
 addTagsForDay day =
@@ -24,12 +29,3 @@ addTagsForDay day =
 delTagsForDay :: Day -> TagStore -> TagStore
 delTagsForDay day =
   Map.map $ Set.delete day
-
-delTagFromDay :: Day -> Tag -> TagStore -> TagStore
-delTagFromDay v k m =
-  case Map.lookup k m of
-    Nothing -> m
-    Just vs ->
-      if Set.member v vs
-        then Map.insert k (Set.delete v vs) m
-        else m
