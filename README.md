@@ -1,6 +1,6 @@
 # orgself
 
-!! *Work In Progress & In Research Phase* !!
+*This project is in an ongoing research phase; it is not ready for general use. But feel free to play with it and provide feedback.*
 
 Create a beautiful journal website with [self-tracking](https://en.wikipedia.org/wiki/Quantified_self) based on org-mode outlines. Orgself is powered by [ema](https://github.com/srid/ema).
 

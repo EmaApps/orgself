@@ -47,11 +47,20 @@ diaryUpdate action diary =
     DiaryAdd day orgFile ->
       diary
         { diaryCal =
-            Map.insert day (orgFile, parseMeasures $ Org.orgMeta orgFile) $ diaryCal diary,
+            Map.insert
+              day
+              (orgFile, parseMeasures $ Org.orgMeta orgFile)
+              $ diaryCal diary,
           diaryTasks =
-            Map.insert day (Task.queryTasks orgFile) $ diaryTasks diary,
+            Map.insert
+              day
+              (Task.queryTasks orgFile)
+              $ diaryTasks diary,
           diaryTags =
-            foldl' (addTag day) (diaryTags diary) (Org.allDocTags . Org.orgDoc $ orgFile)
+            foldl'
+              (addTag day)
+              (diaryTags diary)
+              (Org.allDocTags . Org.orgDoc $ orgFile)
         }
     DiaryDel day ->
       diary
@@ -62,7 +71,13 @@ diaryUpdate action diary =
           diaryTags =
             maybe
               (diaryTags diary)
-              (foldl' (delTag day) (diaryTags diary) . Org.allDocTags . Org.orgDoc . fst)
+              ( foldl'
+                  (delTag day)
+                  (diaryTags diary)
+                  . Org.allDocTags
+                  . Org.orgDoc
+                  . fst
+              )
               (Map.lookup day $ diaryCal diary)
         }
   where
