@@ -48,9 +48,9 @@
       in
       {
         # Used by `nix build`
-        defaultPackage = project false;
+        packages.default = project false;
 
         # Used by `nix develop`
-        devShell = project true;
+        devShells.default = project true;
       });
 }
